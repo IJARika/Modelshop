@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstddef>
 
 #include "../math/vector.h"
 #include "../math/compressed_vector.h"
@@ -6,8 +7,6 @@
 #include "../math/vertexcolor.h"
 
 #pragma once
-
-typedef char byte;
 
 
 //===========
@@ -33,7 +32,11 @@ struct matrix3x4_t
 #define MAX_NUM_LODS 8 // consistent across games
 
 #define MAX_NUM_BONES_PER_VERT 3
+#define MAX_NUM_EXTRA_BONE_WEIGHTS	16 // for apex legends
 
+#define FILEBUFSIZE (32 * 1024 * 1024)
+
+#define FIX_OFFSET(offset) ((offset & 0xFFFE) << (4 * (offset & 1))) // for rmdl v16
 
 //===================
 // STUDIO VERTEX DATA
@@ -279,7 +282,7 @@ namespace vvd
 		};
 
 		unsigned char bone[MAX_NUM_BONES_PER_VERT]; // set to unsigned so we can read it
-		byte	numbones;
+		char	numbones;
 	};
 
 	struct mstudiovertex_t
@@ -381,7 +384,112 @@ namespace vvw
 
 namespace vg
 {
+	// rmdl versions 9-12
+	namespace rev1
+	{
+		struct VertexGroupHeader_t
+		{
+			int id;		// 0x47567430	'0tVG'
+			int version;	    // 1
+			int unk;	        // Usually 0
+			int dataSize;	// Total size of data + header in starpak
 
+			// unsigned char
+			__int64 boneStateChangeOffset; // offset to bone remap buffer
+			__int64 numBoneStateChanges;  // number of "bone remaps" (size: 1)
+
+			// MeshHeader_t
+			__int64 meshOffset;   // offset to mesh buffer
+			__int64 numMeshes;    // number of meshes (size: 0x48)
+
+			// unsigned short
+			__int64 indexOffset;     // offset to index buffer
+			__int64 numIndices;      // number of indices (size: 2 (uint16_t))
+
+			// uses dynamic sized struct, similar to RLE animations
+			__int64 vertOffset;    // offset to vertex buffer
+			__int64 numVerts;     // number of chars in vertex buffer
+
+			// vvw::mstudioboneweightextra_t
+			__int64 extraBoneWeightOffset;   // offset to extended weights buffer
+			__int64 extraBoneWeightSize;    // number of chars in extended weights buffer
+
+			// there is one for every LOD mesh
+			// i.e, unknownCount == lod.meshCount for all LODs
+			__int64 unknownOffset;   // offset to buffer
+			__int64 numUnknown;    // count (size: 0x30)
+
+			// vtx::ModelLODHeader_t
+			__int64 lodOffset;       // offset to LOD buffer
+			__int64 numLODs;        // number of LODs (size: 0x8)
+
+			// vvd::mstudioboneweight_t
+			__int64 legacyWeightOffset;	// seems to be an offset into the "external weights" buffer for this mesh
+			__int64 numLegacyWeights;   // seems to be the number of "external weights" that this mesh uses
+
+			// vtx::StripHeader_t
+			__int64 stripOffset;    // offset to strips buffer
+			__int64 numStrips;     // number of strips (size: 0x23)
+
+			__int64 unused[8];
+		};
+
+		#define VERTEX_POSITION         0x1
+		#define VERTEX_POSITION_PACKED  0x2
+		#define VERTEX_COLOR			0x10
+		#define VERTEX_WEIGHTS_PACKED   0x5000 // this is definitely two flags
+		#define VERTEX_UV2				0x200000000
+
+		struct MeshHeader_t
+		{
+			__int64 flags;	// mesh flags
+
+			// uses dynamic sized struct, similar to RLE animations
+			int vertOffset;			    // start offset for this mesh's vertices
+			int vertCacheSize;		    // size of the vertex structure
+			int numVerts;			    // number of vertices
+
+			int unk1;
+
+			// vvw::mstudioboneweightextra_t
+			int extraBoneWeightOffset;	// start offset for this mesh's "extended weights"
+			int extraBoneWeightSize;    // size or count of extended weights
+
+			// unsigned short
+			int indexOffset;			// start offset for this mesh's "indices"
+			int numIndices;				// number of indices
+
+			// vvd::mstudioboneweight_t
+			int legacyWeightOffset;	// seems to be an offset into the "external weights" buffer for this mesh
+			int numLegacyWeights;   // seems to be the number of "external weights" that this mesh uses
+
+			// vtx::StripHeader_t
+			int stripOffset;        // Index into the strips structs
+			int numStrips;
+
+			// might be stuff like topologies and or bonestates
+			int unk[4];
+
+			/*int numBoneStateChanges;
+			int boneStateChangeOffset;
+			// MDL Version 49 and up only
+			int numTopologyIndices;
+			int topologyOffset;*/
+		};
+
+		struct Vertex_t
+		{
+			// do functions here
+		};
+
+		struct unkdata
+		{
+			__int64 unk;
+			float unk1;
+
+			char data[0x24];
+		};
+	}
 }
 
 
@@ -486,9 +594,9 @@ namespace r1
 		int id; // Model format ID, such as "IDST" (0x49 0x44 0x53 0x54)
 		int version; // Format version number, such as 48 (0x30,0x00,0x00,0x00)
 		int checksum; // This has to be the same in the phy and vtx files to load!
-		char name[64]; // The internal name of the model, padding with null bytes.
+		char name[64]; // The internal name of the model, padding with null chars.
 						// Typically "my_model.mdl" will have an internal name of "my_model"
-		int length; // Data size of MDL file in bytes.
+		int length; // Data size of MDL file in chars.
 
 		Vector eyeposition;	// ideal eye position
 
@@ -600,20 +708,20 @@ namespace r1
 		// if STUDIOHDR_FLAGS_CONSTANT_DIRECTIONAL_LIGHT_DOT is set,
 		// this value is used to calculate directional components of lighting 
 		// on static props
-		byte constdirectionallightdot;
+		char constdirectionallightdot;
 
 		// set during load of mdl data to track *desired* lod configuration (not actual)
 		// the *actual* clamped root lod is found in studiohwdata
 		// this is stored here as a global store to ensure the staged loading matches the rendering
-		byte rootLOD;
+		char rootLOD;
 
 		// set in the mdl data to specify that lod configuration should only allow first numAllowRootLODs
 		// to be set as root LOD:
 		//	numAllowedRootLODs = 0	means no restriction, any lod can be set as root lod.
 		//	numAllowedRootLODs = N	means that lod0 - lod(N-1) can be set as root lod, but not lodN or lower.
-		byte numAllowedRootLODs;
+		char numAllowedRootLODs;
 
-		byte unused;
+		char unused;
 
 		float fadedistance;	// set to -1 to never fade. set above 0 if you want it to fade out, distance is in feet.
 							// player/titan models seem to inherit this value from the first model loaded in menus.
@@ -631,7 +739,7 @@ namespace r1
 		int studiohdr2index;
 
 		// this is in most shipped models, probably part of their asset bakery.
-		// doesn't actually need to be written pretty sure, only four bytes when not present.
+		// doesn't actually need to be written pretty sure, only four chars when not present.
 		// this is not completely true as some models simply have nothing, such as animation models.
 		int sourceFilenameOffset;
 	};
@@ -906,7 +1014,7 @@ namespace r1
 		int					type;	// X, Y, Z, XR, YR, ZR, M
 		float				start;
 		float				end;
-		int					rest;	// byte index value at rest
+		int					rest;	// char index value at rest
 		int					inputfield;	// 0-3 user set controller, 4 mouth
 		int					unused[8];
 	};
@@ -1038,8 +1146,8 @@ namespace r1
 	{
 		struct
 		{
-			byte	valid;
-			byte	total;
+			char	valid;
+			char	total;
 		} num;
 		short		value;
 	};
@@ -1061,8 +1169,8 @@ namespace r1
 
 	struct mstudio_rle_anim_t
 	{
-		byte				bone;
-		byte				flags;		// weighing options
+		char				bone;
+		char				flags;		// weighing options
 
 		// leaving these here as there is no other way to show the data off, there likely should be scale stuff in here
 		// I wanna redo these at some point so it's not copy/paste but honestly I am unsure if it can be done better
@@ -1070,7 +1178,7 @@ namespace r1
 		// scale comes after pos in both cases
 
 		// valid for animating data only
-		inline byte* pData(void) const { return (((byte*)this) + sizeof(struct mstudio_rle_anim_t)); };
+		inline char* pData(void) const { return (((char*)this) + sizeof(struct mstudio_rle_anim_t)); };
 		inline mstudioanim_valueptr_t* pRotV(void) const { return (mstudioanim_valueptr_t*)(pData()); };
 		inline mstudioanim_valueptr_t* pPosV(void) const { return (mstudioanim_valueptr_t*)(pData()) + ((flags & STUDIO_ANIM_ANIMROT) != 0); };
 
@@ -1078,6 +1186,8 @@ namespace r1
 		inline Quaternion48* pQuat48(void) const { return (Quaternion48*)(pData()); };
 		inline Quaternion64* pQuat64(void) const { return (Quaternion64*)(pData()); };
 		inline Vector48* pPos(void) const { return (Vector48*)(pData() + ((flags & STUDIO_ANIM_RAWROT) != 0) * sizeof(*pQuat48()) + ((flags & STUDIO_ANIM_RAWROT2) != 0) * sizeof(*pQuat64())); };
+
+		// need funcs for scale and to make this less stinky
 
 		// points to next bone in the list
 		short				nextoffset;
@@ -1401,9 +1511,9 @@ namespace r1
 		// cache purposes
 		int numvertices; // number of unique vertices/normals/texcoords
 		int vertexindex; // vertex Vector
-						 // offset by vertexindex number of bytes into vvd verts
+						 // offset by vertexindex number of chars into vvd verts
 		int tangentsindex; // tangents Vector
-						   // offset by tangentsindex number of bytes into vvd tangents
+						   // offset by tangentsindex number of chars into vvd tangents
 
 		int numattachments;
 		int attachmentindex;
@@ -1414,9 +1524,9 @@ namespace r1
 		int pad[4];
 
 		int colorindex; // vertex color
-						// offset by colorindex number of bytes into vvc vertex colors
+						// offset by colorindex number of chars into vvc vertex colors
 		int uv2index; // vertex second uv map
-					  // offset by uv2index number of bytes into vvc secondary uv map
+					  // offset by uv2index number of chars into vvc secondary uv map
 
 		int unused[4];
 	};
@@ -1503,6 +1613,27 @@ namespace r1
 // Titanfall 2, version '53'
 namespace r2
 {
+	struct mstudiopertrihdr_t
+	{
+		short version; // game requires this to be 2 or else it errors
+
+		short unk; // may or may not exist, version gets casted as short in ida
+
+		Vector bbmin;
+		Vector bbmax;
+
+		int unused[8];
+	};
+
+	struct mstudiopertrivertex_t
+	{
+		// to get float value:
+		// axisValue * ((float)(bbmax.axis - bbmin.axis) * 0.000015259022)
+		// where axis is x, y, or z. bbmax and bbmin are from the pertri header.
+		short x, y, z;
+	};
+
+
 	#define BONE_CALCULATE_MASK			0x1F
 	#define BONE_PHYSICALLY_SIMULATED	0x01	// bone is physically simulated when physics are active
 	#define BONE_PHYSICS_PROCEDURAL		0x02	// procedural when physics is active
@@ -1682,18 +1813,9 @@ namespace r2
 		}
 
 		int	posscaleindex; // unused
-		/*inline const Vector* pPosScale(int i)
-		const {
-			assert(i >= 0 && i < numbones);
-			return reinterpret_cast<Vector*>((char*)this + posscaleindex) + i;
-		}*/
 
 		int	rotscaleindex;
-		inline const Vector* pRotScale(int i)
-		const {
-			assert(i >= 0 && i < numbones);
-			return reinterpret_cast<Vector*>((char*)this + rotscaleindex) + i;
-		}
+		inline const Vector* pRotScale(int i) const { assert(i >= 0 && i < numbones); return reinterpret_cast<Vector*>((char*)this + rotscaleindex) + i; }
 
 		int	qalignmentindex;
 		inline const Quaternion* pQAlignment(int i)
@@ -1749,8 +1871,8 @@ namespace r2
 	{
 		struct
 		{
-			byte	valid;
-			byte	total;
+			char	valid;
+			char	total;
 		} num;
 		short		value;
 	};
@@ -1775,7 +1897,7 @@ namespace r2
 		float				posscale; // does what posscale is used for
 
 		unsigned char		bone;
-		byte				flags;		// weighing options
+		char				flags;		// weighing options
 
 		inline char* pData() const { return ((char*)this + sizeof(mstudio_rle_anim_t)); } // gets start of animation data, this should have a '+2' if aligned to 4
 		inline mstudioanim_valueptr_t* pRotV() const { return reinterpret_cast<mstudioanim_valueptr_t*>(pData()); } // returns rot as mstudioanim_valueptr_t
@@ -2142,9 +2264,9 @@ namespace r2
 		// cache purposes
 		int numvertices; // number of unique vertices/normals/texcoords
 		int vertexindex; // vertex Vector
-						 // offset by vertexindex number of bytes into vvd verts
+						 // offset by vertexindex number of chars into vvd verts
 		int tangentsindex; // tangents Vector
-						   // offset by tangentsindex number of bytes into vvd tangents
+						   // offset by tangentsindex number of chars into vvd tangents
 
 		int numattachments;
 		int attachmentindex;
@@ -2155,9 +2277,9 @@ namespace r2
 		int pad[4];
 
 		int colorindex; // vertex color
-						// offset by colorindex number of bytes into vvc vertex colors
+						// offset by colorindex number of chars into vvc vertex colors
 		int uv2index; // vertex second uv map
-					  // offset by uv2index number of bytes into vvc secondary uv map
+					  // offset by uv2index number of chars into vvc secondary uv map
 
 		int unused[4];
 	};
@@ -2318,7 +2440,6 @@ namespace r2
 
 	#define STUDIOHDR_FLAGS_RESPAWN_UNK                 0x800000
 
-	// "colorindex is only shifted if 0x1000000 flag is set on the studiohdr" talking about colorindex in mstudiomodel struct
 	// If this flag is present the model has vertex color, and by extension (previously) a VVC (IDVC) file.
 	#define STUDIOHDR_FLAGS_USES_VERTEX_COLOR	        0x1000000
 
@@ -2328,13 +2449,13 @@ namespace r2
 	struct studiohdr_t
 	{
 		int id; // Model format ID, such as "IDST" (0x49 0x44 0x53 0x54)
-		int version; // Format version number, such as 48 (0x30,0x00,0x00,0x00)
+		int version; // Format version number, such as 53 (0x35,0x00,0x00,0x00)
 		int checksum; // This has to be the same in the phy and vtx files to load!
 		int sznameindex; // This has been moved from studiohdr2_t to the front of the main header.
 		inline char* const pszName() const { return ((char*)this + sznameindex); }
-		char name[64]; // The internal name of the model, padding with null bytes.
+		char name[64]; // The internal name of the model, padding with null chars.
 						// Typically "my_model.mdl" will have an internal name of "my_model"
-		int length; // Data size of MDL file in bytes.
+		int length; // Data size of MDL file in chars.
 
 		Vector eyeposition;	// ideal eye position
 
@@ -2387,6 +2508,7 @@ namespace r2
 
 		int numbodyparts;
 		int bodypartindex;
+		inline mstudiobodyparts_t* pBodypart(int i) const { assert(i >= 0 && i < numbodyparts); return reinterpret_cast<mstudiobodyparts_t*>((char*)this + bodypartindex) + i; }
 
 		int numlocalattachments;
 		int localattachmentindex;
@@ -2436,22 +2558,22 @@ namespace r2
 		// if STUDIOHDR_FLAGS_CONSTANT_DIRECTIONAL_LIGHT_DOT is set,
 		// this value is used to calculate directional components of lighting 
 		// on static props
-		byte constdirectionallightdot;
+		char constdirectionallightdot;
 
 		// set during load of mdl data to track *desired* lod configuration (not actual)
 		// the *actual* clamped root lod is found in studiohwdata
 		// this is stored here as a global store to ensure the staged loading matches the rendering
-		byte rootLOD;
+		char rootLOD;
 
 		// set in the mdl data to specify that lod configuration should only allow first numAllowRootLODs
 		// to be set as root LOD:
 		//	numAllowedRootLODs = 0	means no restriction, any lod can be set as root lod.
 		//	numAllowedRootLODs = N	means that lod0 - lod(N-1) can be set as root lod, but not lodN or lower.
-		byte numAllowedRootLODs;
+		char numAllowedRootLODs;
 
-		byte unused;
+		char unused;
 
-		float fadedistance; // set to -1 to never fade. set above 0 if you want it to fade out, distance is in feet.
+		float defaultFadeDist; // set to -1 to never fade. set above 0 if you want it to fade out, distance is in feet.
 							// player/titan models seem to inherit this value from the first model loaded in menus.
 							// works oddly on entities, probably only meant for static props
 
@@ -2462,7 +2584,7 @@ namespace r2
 		int surfacepropLookup; // this index must be cached by the loader, not saved in the file
 
 		// this is in most shipped models, probably part of their asset bakery.
-		// doesn't actually need to be written pretty sure, only four bytes when not present.
+		// doesn't actually need to be written pretty sure, only four chars when not present.
 		// this is not completely true as some models simply have nothing, such as animation models.
 		int sourceFilenameOffset;
 
@@ -2505,13 +2627,13 @@ namespace r2
 
 		// this data block is related to the vphy, if it's not present the data will not be written
 		// definitely related to phy, apex phy has this merged into it
-		int unkmemberindex1; // section between vphy and vtx.?
-		int numunkmember1; // only seems to be used when phy has one solid
+		int unkindex; // section between vphy and vtx.?
+		int numunk; // only seems to be used when phy has one solid
 
 		// mostly seen on '_animated' suffixed models
 		// manually declared bone followers are no longer stored in kvs under 'bone_followers', they are now stored in an array of ints with the bone index.
-		int numbonefollowers; // numBoneFollowers
-		int bonefollowerindex;
+		int numBoneFollowers;
+		int boneFollowerIndex; // index only written when numbones > 1, means whatever func writes this likely checks this (would make sense because bonefollowers need more than one bone to even be useful). maybe only written if phy exists
 
 		int unused1[60];
 
@@ -2529,8 +2651,8 @@ namespace r5
 		{
 			struct
 			{
-				byte	valid;
-				byte	total;
+				char	valid;
+				char	total;
 			} num;
 			short		value;
 		};
@@ -2563,7 +2685,7 @@ namespace r5
 		#define STUDIO_ANIM_ANIMROT		0x02 // mstudioanim_valueptr_t
 		#define STUDIO_ANIM_ANIMPOS		0x04 // mstudioanim_valueptr_t
 
-		// flags for the per bone array, in 4 bit sections (two sets of flags per byte), aligned to two bytes
+		// flags for the per bone array, in 4 bit sections (two sets of flags per char), aligned to two chars
 		#define STUDIO_ANIM_POS		0x1 // animation has pos values
 		#define STUDIO_ANIM_ROT		0x2	// animation has rot values
 		#define STUDIO_ANIM_SCALE	0x4	// animation has scale values
@@ -2680,9 +2802,9 @@ namespace r5
 			int version; // Format version number, such as 48 (0x30,0x00,0x00,0x00)
 			int checksum; // This has to be the same in the phy and vtx files to load!
 			int sznameindex; // This has been moved from studiohdr2 to the front of the main header.
-			char name[64]; // The internal name of the model, padding with null bytes.
+			char name[64]; // The internal name of the model, padding with null chars.
 							// Typically "my_model.mdl" will have an internal name of "my_model"
-			int length; // Data size of MDL file in bytes.
+			int length; // Data size of MDL file in chars.
 
 			Vector eyeposition;	// ideal eye position
 
@@ -2717,7 +2839,7 @@ namespace r5
 			// mstudiotexture_t
 			// short rpak path
 			// raw textures
-			int materialtypesindex; // index into an array of byte sized material type enums for each material used by the model
+			int materialtypesindex; // index into an array of char sized material type enums for each material used by the model
 			int numtextures; // the material limit exceeds 128, probably 256.
 			int textureindex;
 
@@ -2786,22 +2908,22 @@ namespace r5
 			// if STUDIOHDR_FLAGS_CONSTANT_DIRECTIONAL_LIGHT_DOT is set,
 			// this value is used to calculate directional components of lighting 
 			// on static props
-			byte constdirectionallightdot;
+			char constdirectionallightdot;
 
 			// set during load of mdl data to track *desired* lod configuration (not actual)
 			// the *actual* clamped root lod is found in studiohwdata
 			// this is stored here as a global store to ensure the staged loading matches the rendering
-			byte rootLOD;
+			char rootLOD;
 
 			// set in the mdl data to specify that lod configuration should only allow first numAllowRootLODs
 			// to be set as root LOD:
 			//	numAllowedRootLODs = 0	means no restriction, any lod can be set as root lod.
 			//	numAllowedRootLODs = N	means that lod0 - lod(N-1) can be set as root lod, but not lodN or lower.
-			byte numAllowedRootLODs;
+			char numAllowedRootLODs;
 
-			byte unused;
+			char unused;
 
-			float fadedistance;	// set to -1 to never fade. set above 0 if you want it to fade out, distance is in feet.
+			float defaultFadeDist;	// set to -1 to never fade. set above 0 if you want it to fade out, distance is in feet.
 								// player/titan models seem to inherit this value from the first model loaded in menus.
 								// works oddly on entities, probably only meant for static props
 
@@ -2815,7 +2937,7 @@ namespace r5
 			int surfacepropLookup; // saved in the file
 
 			// this is in most shipped models, probably part of their asset bakery.
-			// doesn't actually need to be written pretty sure, only four bytes when not present.
+			// doesn't actually need to be written pretty sure, only four chars when not present.
 			// this is not completely true as some models simply have nothing, such as animation models.
 			int sourceFilenameOffset;
 
@@ -2846,6 +2968,7 @@ namespace r5
 			// this is now used for combined files in rpak, vtx, vvd, and vvc are all combined while vphy is separate.
 			// the indexes are added to the offset in the rpak mdl_ header.
 			// vphy isn't vphy, looks like a heavily modified vphy.
+			// as of s2/3 these are no unused except phy
 			int vtxindex; // VTX
 			int vvdindex; // VVD / IDSV
 			int vvcindex; // VVC / IDCV 
@@ -2857,13 +2980,13 @@ namespace r5
 			int vphysize; // still used in models using vg
 
 			// unused in apex, gets cut in 12.1
-			int unkmemberindex1; // deprecated_imposterIndex
-			int numunkmember1; // deprecated_numImposters
+			int deprecated_unkindex; // deprecated_imposterIndex
+			int deprecated_numunk; // deprecated_numImposters
 
 			// mostly seen on '_animated' suffixed models
 			// manually declared bone followers are no longer stored in kvs under 'bone_followers', they are now stored in an array of ints with the bone index.
-			int numbonefollowers; // numBoneFollowers
-			int bonefollowerindex;
+			int numBoneFollowers; // numBoneFollowers
+			int boneFollowerIndex;
 
 			// BVH4 size (?)
 			Vector mins;
@@ -2888,8 +3011,8 @@ namespace r5
 		{
 			struct
 			{
-				byte	valid;
-				byte	total;
+				char	valid;
+				char	total;
 			} num;
 			short		value;
 		};
@@ -2959,6 +3082,247 @@ namespace r5
 			// both of these are used in pAnim
 			__int64 unk1;
 			__int64 unk2; // gets converted to an offset on load?
+		};
+	}
+
+	namespace v16
+	{
+		struct mstudioanimdesc_t
+		{
+			float fps; // frames per second	
+			int flags; // looping/non-looping flags
+
+			int numframes;
+
+			unsigned short sznameindex;
+
+			unsigned short framemovementindex; // new in v52
+
+			int animindex; // non-zero when anim data isn't in sections
+
+			unsigned short numikrules;
+			unsigned short ikruleindex; // non-zero when IK data is stored in the mdl
+
+			__int64 unk2;
+			unsigned short unk1;
+
+			unsigned short sectionindex;
+			unsigned short sectionstaticframes; // number of static frames inside the animation, the reset excluding the final frame are stored externally. when external data is not loaded(?)/found(?) it falls back on the last frame of this as a stall
+			unsigned short sectionframes; // number of frames used in each fast lookup section, zero if not used
+		};
+
+		struct mstudioseqdesc_t
+		{
+			short szlabelindex;
+
+			short szactivitynameindex;
+
+			int flags; // looping/non-looping flags
+
+			short activity; // initialized at loadtime to game DLL values
+			short actweight;
+
+			short numevents;
+			short eventindex;
+
+			Vector bbmin; // per sequence bounding box
+			Vector bbmax;
+
+			short numblends;
+
+			// Index into array of shorts which is groupsize[0] x groupsize[1] in length
+			short animindexindex;
+
+			//short movementindex; // [blend] float array for blended movement
+			short paramindex[2]; // X, Y, Z, XR, YR, ZR
+			float paramstart[2]; // local (0..1) starting value
+			float paramend[2]; // local (0..1) ending value
+			//short paramparent;
+
+			float fadeintime; // ideal cross fate in time (0.2 default)
+			float fadeouttime; // ideal cross fade out time (0.2 default)
+
+			char fill[4];
+
+			// stuff is different after this
+			/*
+			short localentrynode; // transition node at entry
+			short localexitnode; // transition node at exit
+			short nodeflags; // transition rules
+
+			float entryphase; // used to match entry gait
+			float exitphase; // used to match exit gait
+
+			float lastframe; // frame that should generation EndOfSequence
+
+			short nextseq; // auto advancing sequences
+			short pose; // index of delta animation between end and nextseq*/
+
+			short numikrules;
+
+			short numautolayers;
+			unsigned short autolayerindex;
+
+			unsigned short weightlistindex;
+
+			char groupsize[2];
+
+			unsigned short posekeyindex;
+
+			short numiklocks;
+			short iklockindex;
+
+			// Key values
+			unsigned short keyvalueindex;
+			short keyvaluesize;
+
+			//short cycleposeindex; // index of pose parameter to use as cycle index
+
+			short activitymodifierindex;
+			short numactivitymodifiers;
+
+			int ikResetMask; // new in v52
+			int unk1;
+
+			unsigned short unkindex;
+			short unkcount;
+		};
+
+		struct mstudiobbox_t
+		{
+			short bone;
+			short group; // intersection group
+
+			Vector bbmin; // bounding box
+			Vector bbmax;
+
+			unsigned short szhitboxnameindex; // offset to the name of the hitbox.
+
+			unsigned short keyvalueindex; // used for keyvalues, most for titans.
+		};
+
+		struct studiohdr_t
+		{
+			int flags;
+			int checksum; // unsure if this is still checksum, there isn't any other files that have it still
+			unsigned short sznameindex; // No longer stored in string block, uses string in header.
+			char name[32]; // The internal name of the model, padding with null chars.
+						   // Typically "my_model.mdl" will have an internal name of "my_model"
+			char unk_v16;
+
+			char surfacepropLookup; // saved in the file
+
+			float mass;
+
+			int version; // time will tell
+
+			unsigned short hitboxsetindex;
+			char numhitboxsets;
+
+			char illumpositionattachmentindex;
+
+			Vector illumposition;	// illumination center
+
+			Vector hull_min;		// ideal movement hull size
+			Vector hull_max;
+
+			Vector view_bbmin;		// clipping bounding box
+			Vector view_bbmax;
+
+			unsigned short numbones; // bones
+			unsigned short boneindex;
+			unsigned short bonedataindex;
+
+			unsigned short numlocalseq; // sequences
+			unsigned short localseqindex;
+
+			//char unkfill[5];
+
+			// needs to be confirmed
+			unsigned short unk_v54_v14[2]; // added in v13 -> v14
+
+			// needs to be confirmed
+			char activitylistversion; // initialization flag - have the sequences been indexed?
+
+			char numlocalattachments;
+			unsigned short localattachmentindex;
+
+			unsigned short numlocalnodes;
+			unsigned short localnodenameindex;
+			unsigned short nodedataindexindex;
+
+			unsigned short numikchains;
+			unsigned short ikchainindex;
+
+			unsigned short numtextures; // the material limit exceeds 128, probably 256.
+			unsigned short textureindex;
+
+			// replaceable textures tables
+			unsigned short numskinref;
+			unsigned short numskinfamilies;
+			unsigned short skinindex;
+
+			short numbodyparts;
+			unsigned short bodypartindex;
+
+			// this is rui meshes
+			unsigned short numruimeshes;
+			unsigned short ruimeshindex;
+
+			unsigned short numlocalposeparameters;
+			unsigned short localposeparamindex;
+
+			unsigned short surfacepropindex;
+
+			unsigned short keyvalueindex;
+
+			// vg stuff 1
+			unsigned short numVGMeshes; // total number of meshes, not including LODs
+			unsigned short vgMeshIndex;
+
+			unsigned short bonetablebynameindex;
+
+			// vg stuff 2
+			unsigned short boneStateIndex;
+			unsigned short numBoneStates;
+
+			unsigned short vgHeaderIndex;
+			unsigned short numVGHeaders;
+
+			unsigned short vgLODIndex;
+			unsigned short numVGLODs;
+
+			float fadeDistance;
+
+			float gathersize; // what. from r5r struct
+
+			unsigned short numsrcbonetransform;
+			unsigned short srcbonetransformindex;
+
+			// asset bakery strings if it has any
+			unsigned short sourceFilenameOffset;
+
+			unsigned short linearboneindex;
+
+			// unsure what this is for but it exists for jigglbones
+			unsigned short numprocbonesunk;
+			unsigned short procbonearrayindex;
+			unsigned short procbonemaskindex;
+
+			// mostly seen on '_animated' suffixed models
+			// manually declared bone followers are no longer stored in kvs under 'bone_followers', they are now stored in an array of ints with the bone index.
+			unsigned short numBoneFollowers; // numBoneFollowers
+			unsigned short boneFollowerIndex;
+
+			unsigned short bvh4index; // same as v54
+
+			char unk5_v16; // unk4_v54[0]
+			char unk6_v16; // unk4_v54[1]
+			short unk7_v16; // unk4_v54[2]
+			short unk8_v16;
+			short unk9_v16;
+
+			//unsigned short unkshorts[7];
 		};
 	}
 }

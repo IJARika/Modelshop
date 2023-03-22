@@ -140,20 +140,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dmx\dmx.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="math\mathlib.cpp" />
     <ClCompile Include="studio\bone_setup.cpp" />
     <ClCompile Include="studio\studio.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dmx\dmx.h" />
     <ClInclude Include="math\compressed_vector.h" />
     <ClInclude Include="math\mathlib.h" />
     <ClInclude Include="math\vector.h" />
     <ClInclude Include="math\vector2d.h" />
     <ClInclude Include="math\vector4d.h" />
+    <ClInclude Include="math\vector_test.h" />
     <ClInclude Include="math\vertexcolor.h" />
     <ClInclude Include="studio\bone_setup.h" />
     <ClInclude Include="studio\studio.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

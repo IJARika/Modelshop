@@ -16,6 +16,18 @@
     <Filter Include="Header Files\math">
       <UniqueIdentifier>{2fe435e1-7771-444d-a01c-3fc177fc7ea2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\dmx">
+      <UniqueIdentifier>{8d2e0a77-ddc5-4891-a980-be70f31bfeec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\studio">
+      <UniqueIdentifier>{125f52ae-c8c3-42e9-a64b-51afeef8adf6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\math">
+      <UniqueIdentifier>{c0fbb725-dcd3-44eb-9ca6-eb93f5ec2dbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\dmx">
+      <UniqueIdentifier>{a9042b4e-7010-466b-9149-327a99e2f030}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -28,16 +40,13 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="math\mathlib.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\math</Filter>
+    </ClCompile>
+    <ClCompile Include="dmx\dmx.cpp">
+      <Filter>Source Files\dmx</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="studio\studio.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="studio\bone_setup.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="math\vector.h">
       <Filter>Header Files\math</Filter>
     </ClInclude>
@@ -55,6 +64,21 @@
     </ClInclude>
     <ClInclude Include="math\mathlib.h">
       <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector_test.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="dmx\dmx.h">
+      <Filter>Header Files\dmx</Filter>
+    </ClInclude>
+    <ClInclude Include="studio\bone_setup.h">
+      <Filter>Header Files\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="studio\studio.h">
+      <Filter>Header Files\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
