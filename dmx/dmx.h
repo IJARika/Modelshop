@@ -95,7 +95,7 @@ struct DmxAttribute_t
 class CDataModelAttributeList
 {
 public:
-	void AddAtribute(int* name, char* type, void* value);
+	void AddAttribute(int* name, char* type, void* value);
 
 private:
 	int numAttributes;

@@ -43,13 +43,14 @@ int CDataModelStringDict::AddToStringDict(const char* string)
 
 void CDataModelStringDict::WriteStringDict(char** pData)
 {
-	int* stringCount = reinterpret_cast<int*>(pData);
-	*stringCount = numStrings;
+	//int* stringCount = reinterpret_cast<int*>(*pData);
+	//*stringCount = numStrings;
+	*reinterpret_cast<int*>(*pData) = numStrings;
 	*pData += sizeof(numStrings);
 
 	for (auto& entry : strings)
 	{
-		int strLength = strlen(entry.string) + 1;
+		int strLength = strnlen_s(entry.string, MAX_PATH_SOURCE) + 1;
 
 		strcpy_s(*pData, strLength, entry.string);
 
@@ -81,7 +82,7 @@ const char* CDataModelStringDict::StringFromIndex(int* index)
 //==========================
 // DataModel Attribute List
 //==========================
-void CDataModelAttributeList::AddAtribute(int* name, char* type, void* value)
+void CDataModelAttributeList::AddAttribute(int* name, char* type, void* value)
 {
 	DmxAttribute_t newAttribute{ *name, *type, &value };
 	attributes.push_back(newAttribute);
@@ -135,9 +136,7 @@ void CDataModel::WriteDataModel(char** pData)
 
 	*pData += DMXHeader.length() + 1;
 
-	StringDict.WriteStringDict(*pData);
-
-	//return pData;
+	StringDict.WriteStringDict(pData);
 }
 
 
