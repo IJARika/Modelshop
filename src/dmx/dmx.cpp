@@ -16,8 +16,9 @@
 //=============================
 CDataModelStringDict::CDataModelStringDict()
 {
-	strings.push_back(stringentry_t{ "", 0 });
-	numStrings = 1;
+	// this can be removed because it's an extra byte if never used
+	/*strings.push_back(stringentry_t{ "", 0 });
+	numStrings = 1;*/
 }
 
 int CDataModelStringDict::AddToStringDict(const char* string)
@@ -82,27 +83,113 @@ const char* CDataModelStringDict::StringFromIndex(int* index)
 //==========================
 // DataModel Attribute List
 //==========================
-void CDataModelAttributeList::AddAttribute(int* name, char* type, void* value)
+CDataModelAttribute::CDataModelAttribute(int name, char type, void* value)
 {
-	DmxAttribute_t newAttribute{ *name, *type, &value };
-	attributes.push_back(newAttribute);
+	attributeName = name;
+	attributeType = type;
+	attributeValue = &value;
+}
+
+// unfinished
+int CDataModelAttribute::ValueSizeFromType()
+{
+	int valueSize = 0;
+
+	switch (attributeType)
+	{
+	case AT_VOID:
+		valueSize = 0; // not correct
+		break;
+	case AT_BOOL:
+		valueSize = 1;
+		break;
+	case AT_ELEMENT:
+	case AT_INT:
+	case AT_FLOAT:
+	case AT_STRING:
+		valueSize = 4;
+		break;
+	default:
+		Error("error: unknown attribute type used!!!");
+		break;
+	}
+
+	return valueSize;
+}
+
+void CDataModelAttribute::WriteAttribute(char** pData)
+{
+	memcpy(*pData, &attributeName, sizeof(attributeName) + sizeof(attributeType));
+	*pData += sizeof(attributeName) + sizeof(attributeType);
+
+	// too be tested
+	int valueSize = ValueSizeFromType();
+	memcpy(*pData, &attributeValue, valueSize);
+	*pData += valueSize;
+}
+
+void CDataModelAttributeList::AddAttribute(int name, char type, void* value)
+{
+	CDataModelAttribute newAttribute{ name, type, value };
+	Attributes.push_back(newAttribute);
 
 	numAttributes++;
+}
+
+void CDataModelAttributeList::WriteAttributeList(char** pData)
+{
+	memcpy(*pData, &numAttributes, sizeof(numAttributes));
+	*pData += sizeof(numAttributes);
+
+	for (auto& attribute : Attributes)
+	{
+		attribute.WriteAttribute(pData);
+	}
 }
 
 
 //========================
 // DataModel Element List
 //========================
+DmxElement_t* CDataModelElementList::pElement(int index)
+{
+	return &Elements.at(index);
+}
+
+CDataModelAttributeList* CDataModelElementList::pAttributeList(int index)
+{
+	return &AttributeList.at(index);
+}
+
 int CDataModelElementList::AddElement(int type, int name, UUID& uuid, CDataModelAttributeList& attributes)
 {
 	DmxElement_t newElement{ type, name, uuid };
-	elements.push_back(newElement);
-	attributeList.push_back(attributes);
+	Elements.push_back(newElement);
+	AttributeList.push_back(attributes);
 
 	numElements++;
 
-	return std::distance(elements.begin(), elements.end()); // this may not work as intended, if encountering a bug with indexes check here
+	return std::distance(Elements.begin(), Elements.end()); // this may not work as intended, if encountering a bug with indexes check here
+}
+
+void CDataModelElementList::WriteElementList(char** pData)
+{
+	memcpy(*pData, &numElements, sizeof(numElements));
+	*pData += sizeof(numElements);
+	
+	/*memcpy(*pData, &elements, sizeof(DmxElement_t) * elements.size());
+	*pData += sizeof(DmxElement_t) * elements.size();*/
+
+	for (auto& element : Elements)
+	{
+		memcpy(*pData, &element, sizeof(DmxElement_t));
+		*pData += sizeof(DmxElement_t);
+	}
+
+	for (auto& attributelist : AttributeList)
+	{
+		attributelist.WriteAttributeList(pData);
+	}
 }
 
 
@@ -137,6 +224,8 @@ void CDataModel::WriteDataModel(char** pData)
 	*pData += DMXHeader.length() + 1;
 
 	StringDict.WriteStringDict(pData);
+
+	ElementList.WriteElementList(pData);
 }
 
 
@@ -197,9 +286,28 @@ void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeade
 // bad name for what this does
 void DMXBuildSkeletonR2(CDataModel* dmx, r2::studiohdr_t* pHdr)
 {
-	CDataModelAttributeList list;
-	UUID uuid;
-	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("DmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), uuid, list);
+	UUID rootUUID;
+	CDataModelAttributeList rootList;
+
+	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("DmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
+
+	dmx->pElementList()->pAttributeList(0)->AddAttribute(dmx->pStringDict()->AddToStringDict("PISS"), 6, nullptr);
+}
+
+// adjusts dmx file name for export, this is really bad lol
+void DMXRenameLODs(std::string &fileName, int lodIdx)
+{
+	char lodName[8] = "";
+	snprintf(lodName, 8, "_lod%i", lodIdx);
+
+	if (fileName.rfind("_lod0") != std::string::npos)
+	{
+		fileName.replace(fileName.length() - 5, 8, lodName);
+	}
+	else
+	{
+		fileName.append(lodName);
+	}
 }
 
 void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
@@ -228,6 +336,11 @@ void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 				r2::mstudiomodel_t* pModel = pBodypart->pModel(modelIdx);
 				vtx::ModelHeader_t* pVtxModel = pVtxBodyPart->pModel(modelIdx);
 
+				if (!pModel->nummeshes)
+				{
+					continue;
+				}
+
 				vtx::ModelLODHeader_t* pVtxLOD = pVtxModel->pLOD(lodIdx);
 
 				CDataModel dmxOut("<!-- dmx encoding binary 5 format model 18 -->\n");
@@ -239,14 +352,19 @@ void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 
 				dmxOut.WriteDataModel(&pData);
 
-				std::string fileName = GET_FILE_NAME(pModel->name);
-				std::string fileOutPath = std::filesystem::path(fileDir).append(fileName).u8string();
+				std::string fileName = GET_FILE_STEM(pModel->name);
+				
+				if (lodIdx > 0)
+				{
+					DMXRenameLODs(fileName, lodIdx);
+				}
+
+				fileName.append(".dmx");
+				
+				std::string fileOutPath = std::filesystem::path(fileDir).append(fileName).u8string();		
 
 				std::ofstream dmxFile(fileOutPath, std::ios::out | std::ios::binary);				
-
 				dmxFile.write(pBase, pData - pBase);
-
-
 			}
 		}
 	}

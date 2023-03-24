@@ -84,22 +84,38 @@ enum DmAttributeType_t : char
 	AT_TYPE_INVALID = 0xff // unsure the actual value for this
 };
 
-struct DmxAttribute_t
+struct DmxAttributeArray_t
 {
-	int name; // string dictionary index
-	char type; // DmAttributeType_t
+	int numAttributeValues;
+	void* attributeValues;
+};
+
+class CDataModelAttribute
+{
+public:
+	CDataModelAttribute(int name, char type, void* value);
+
+	int ValueSizeFromType();
+
+	void WriteAttribute(char** pDatax);
+
+private:
+	int attributeName; // string dictionary index
+	char attributeType; // DmAttributeType_t
 	
-	void* value;
+	void* attributeValue;
 };
 
 class CDataModelAttributeList
 {
 public:
-	void AddAttribute(int* name, char* type, void* value);
+	void AddAttribute(int name, char type, void* value);
+
+	void WriteAttributeList(char** pData);
 
 private:
 	int numAttributes;
-	std::vector<DmxAttribute_t> attributes;
+	std::vector<CDataModelAttribute> Attributes;
 };
 
 
@@ -116,12 +132,17 @@ struct DmxElement_t
 class CDataModelElementList
 {
 public:
+	DmxElement_t* pElement(int index);
+	CDataModelAttributeList* pAttributeList(int index);
+
 	int AddElement(int type, int name, UUID& uuid, CDataModelAttributeList& attributes);
+
+	void WriteElementList(char** pData);
 
 private:
 	int numElements;
-	std::vector<DmxElement_t> elements;
-	std::vector< CDataModelAttributeList> attributeList; // should match the total number of elements
+	std::vector<DmxElement_t> Elements;
+	std::vector<CDataModelAttributeList> AttributeList; // should match the total number of elements
 };
 
 

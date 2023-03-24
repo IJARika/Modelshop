@@ -17,14 +17,15 @@ int main(int argc, char** argv)
 		Error("file not found");
 
 	std::ifstream mdlIn(filePath, std::ios::in | std::ios::binary);
-
 	char* mdlBuf = new char[std::filesystem::file_size(filePath)];
-
 	mdlIn.read(mdlBuf, std::filesystem::file_size(filePath));
 
-	DMXFromMDL(mdlBuf, GET_FILE_PATH(filePath));
+	// set this up here so it's not done per loop, will have to be moved wherever this ends up
+	std::string dmxOutPath = std::filesystem::path(filePath).parent_path().append("dmx").u8string();
+	std::filesystem::create_directories(dmxOutPath);
+
+	DMXFromMDL(mdlBuf, dmxOutPath);
 
 	delete[] mdlBuf;
-
-	mdlIn.close();
+	mdlIn.close(); // shouldn't need this
 }
