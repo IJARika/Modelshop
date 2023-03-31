@@ -38,6 +38,7 @@ struct matrix3x4_t
 
 #define FIX_OFFSET(offset) ((offset & 0xFFFE) << (4 * (offset & 1))) // for rmdl v16
 
+
 //===================
 // STUDIO VERTEX DATA
 //===================
@@ -583,10 +584,10 @@ namespace r1
 	#define STUDIOHDR_FLAGS_RESPAWN_UNK                 0x800000
 
 	// "colorindex is only shifted if 0x1000000 flag is set on the studiohdr" talking about colorindex in mstudiomodel struct
-	// If this flag is present the model has vertex color, and by extension (previously) a VVC (IDVC) file.
+	// If this flag is present the model has vertex color, and by extension a VVC (IDVC) file.
 	#define STUDIOHDR_FLAGS_USES_VERTEX_COLOR	        0x1000000
 
-	// If this flag is present the model has a secondary UV layer, and by extension (previously) a VVC (IDVC) file.
+	// If this flag is present the model has a secondary UV layer, and by extension a VVC (IDVC) file.
 	#define STUDIOHDR_FLAGS_USES_UV2			        0x2000000
 
 	struct studiohdr_t
@@ -842,8 +843,8 @@ namespace r1
 		int surfacepropLookup; // this index must be cached by the loader, not saved in the file
 
 		// bone scale(?)
-		Vector scale;
-		Vector scalescale;
+		Vector scale; // base bone scale
+		Vector scalescale; // scale muliplier for bone scale in animations
 
 		int unused; // remove as appropriate
 	};
@@ -1684,12 +1685,12 @@ namespace r2
 		Vector pos; // base bone position
 		Quaternion quat;
 		RadianEuler rot; // base bone rotation
-		Vector scale; // bone scale(?)
+		Vector scale; // base bone scale
 
 		// compression scale
 		Vector posscale; // scale muliplier for bone position in animations. depreciated in v53, as the posscale is stored in anim bone headers
 		Vector rotscale; // scale muliplier for bone rotation in animations
-		Vector scalescale; // scale muliplier for scale
+		Vector scalescale; // scale muliplier for bone scale in animations
 
 		matrix3x4_t poseToBone;
 		Quaternion qAlignment;
@@ -2440,10 +2441,10 @@ namespace r2
 
 	#define STUDIOHDR_FLAGS_RESPAWN_UNK                 0x800000
 
-	// If this flag is present the model has vertex color, and by extension (previously) a VVC (IDVC) file.
+	// If this flag is present the model has vertex color, and by extension a VVC (IDVC) file.
 	#define STUDIOHDR_FLAGS_USES_VERTEX_COLOR	        0x1000000
 
-	// If this flag is present the model has a secondary UV layer, and by extension (previously) a VVC (IDVC) file.
+	// If this flag is present the model has a secondary UV layer, and by extension a VVC (IDVC) file.
 	#define STUDIOHDR_FLAGS_USES_UV2			        0x2000000
 
 	struct studiohdr_t
@@ -2647,6 +2648,194 @@ namespace r5
 	// note: many things that are normally written on load are saved in file, for example 'surfacepropLookup'
 	namespace v8
 	{
+		
+
+		// some of these are likely different in apex
+		#define BONE_CALCULATE_MASK			0x1F
+		#define BONE_PHYSICALLY_SIMULATED	0x01	// bone is physically simulated when physics are active
+		#define BONE_PHYSICS_PROCEDURAL		0x02	// procedural when physics is active
+		#define BONE_ALWAYS_PROCEDURAL		0x04	// bone is always procedurally animated
+		#define BONE_SCREEN_ALIGN_SPHERE	0x08	// bone aligns to the screen, not constrained in motion.
+		#define BONE_SCREEN_ALIGN_CYLINDER	0x10	// bone aligns to the screen, constrained by it's own axis.
+
+		#define BONE_USED_BY_IKCHAIN		0x20 // bone is influenced by IK chains, added in V52 (Titanfall 1)
+
+		#define BONE_USED_MASK				0x0007FF00
+		#define BONE_USED_BY_ANYTHING		0x0007FF00
+		#define BONE_USED_BY_HITBOX			0x00000100	// bone (or child) is used by a hit box
+		#define BONE_USED_BY_ATTACHMENT		0x00000200	// bone (or child) is used by an attachment point
+		#define BONE_USED_BY_VERTEX_MASK	0x0003FC00
+		#define BONE_USED_BY_VERTEX_LOD0	0x00000400	// bone (or child) is used by the toplevel model via skinned vertex
+		#define BONE_USED_BY_VERTEX_LOD1	0x00000800	
+		#define BONE_USED_BY_VERTEX_LOD2	0x00001000  
+		#define BONE_USED_BY_VERTEX_LOD3	0x00002000
+		#define BONE_USED_BY_VERTEX_LOD4	0x00004000
+		#define BONE_USED_BY_VERTEX_LOD5	0x00008000
+		#define BONE_USED_BY_VERTEX_LOD6	0x00010000
+		#define BONE_USED_BY_VERTEX_LOD7	0x00020000
+		#define BONE_USED_BY_BONE_MERGE		0x00040000	// bone is available for bone merge to occur against it
+
+		#define BONE_FLAG_UNK				0x00080000 // where?
+
+		#define BONE_USED_BY_VERTEX_AT_LOD(lod) ( BONE_USED_BY_VERTEX_LOD0 << (lod) )
+		#define BONE_USED_BY_ANYTHING_AT_LOD(lod) ( ( BONE_USED_BY_ANYTHING & ~BONE_USED_BY_VERTEX_MASK ) | BONE_USED_BY_VERTEX_AT_LOD(lod) )
+
+		#define BONE_TYPE_MASK				0x00F00000
+		#define BONE_FIXED_ALIGNMENT		0x00100000	// bone can't spin 360 degrees, all interpolation is normalized around a fixed orientation
+
+		#define BONE_HAS_SAVEFRAME_POS		0x00200000	// Vector48
+		#define BONE_HAS_SAVEFRAME_ROT64	0x00400000	// Quaternion64
+		#define BONE_HAS_SAVEFRAME_ROT32	0x00800000	// Quaternion32
+
+		#define BONE_FLAG_UNK1				0x01000000 // where?
+
+		struct mstudiobone_t
+		{
+			int sznameindex;
+			inline char* const pszName() const { return ((char*)this + sznameindex); }
+
+			int parent; // parent bone
+			int bonecontroller[6]; // bone controller index, -1 == none
+
+			// default values
+			Vector pos; // base bone position
+			Quaternion quat;
+			RadianEuler rot; // base bone rotation
+			Vector scale; // base bone scale
+
+			matrix3x4_t poseToBone;
+			Quaternion qAlignment;
+
+			int flags;
+			int proctype;
+			int procindex; // procedural rule offset
+			int physicsbone; // index into physically simulated bone
+							 // from what I can tell this is the section that is parented to this bone, and if this bone is not the parent of any sections, it goes up the bone chain to the nearest bone that does and uses that section index
+			int surfacepropidx; // index into string tablefor property name
+			inline char* const pszSurfaceProp() const { return ((char*)this + surfacepropidx); }
+
+			int contents; // See BSPFlags.h for the contents flags
+
+			int surfacepropLookup; // this index must be cached by the loader, not saved in the file
+
+			int unk;
+
+			int unkid; // physics index (?)
+		};
+
+		#define JIGGLE_IS_FLEXIBLE				0x01
+		#define JIGGLE_UNK						0x02
+		#define JIGGLE_HAS_YAW_CONSTRAINT		0x04
+		#define JIGGLE_HAS_PITCH_CONSTRAINT		0x08
+		#define JIGGLE_HAS_ANGLE_CONSTRAINT		0x10
+		#define JIGGLE_HAS_LENGTH_CONSTRAINT	0x20
+		#define JIGGLE_HAS_BASE_SPRING			0x40
+
+		// apex changed this a bit, 'is_rigid' cut
+		struct mstudiojigglebone_t
+		{
+			char flags;
+
+			unsigned char bone; // id of bone, might be single byte
+
+			short pad; // possibly unused, possibly struct packing
+
+			// general params
+			float length; // how far from bone base, along bone, is tip
+			float tipMass;
+			float tipFriction; // friction applied to tip velocity, 0-1
+
+			// flexible params
+			float yawStiffness;
+			float yawDamping;
+			float pitchStiffness;
+			float pitchDamping;
+			float alongStiffness;
+			float alongDamping;
+
+			// angle constraint
+			float angleLimit; // maximum deflection of tip in radians
+
+			// yaw constraint
+			float minYaw; // in radians
+			float maxYaw; // in radians
+			float yawFriction;
+			float yawBounce;
+
+			// pitch constraint
+			float minPitch; // in radians
+			float maxPitch; // in radians
+			float pitchFriction;
+			float pitchBounce;
+
+			// base spring
+			float baseMass;
+			float baseStiffness;
+			float baseDamping;
+			float baseMinLeft;
+			float baseMaxLeft;
+			float baseLeftFriction;
+			float baseMinUp;
+			float baseMaxUp;
+			float baseUpFriction;
+			float baseMinForward;
+			float baseMaxForward;
+			float baseForwardFriction;
+		};
+
+		// this struct is the same in r1 and r2
+		struct mstudiolinearbone_t
+		{
+			int numbones;
+
+			int flagsindex;
+			inline int flags(int i) const { assert(i >= 0 && i < numbones); return reinterpret_cast<int>((char*)this + flagsindex) + i; }
+			inline int* pFlags(int i) const { assert(i >= 0 && i < numbones); return reinterpret_cast<int*>((char*)this + flagsindex) + i; }
+
+			int	parentindex;
+			inline int* pParent(int i)
+				const {
+				assert(i >= 0 && i < numbones);
+				return reinterpret_cast<int*>((char*)this + parentindex) + i;
+			}
+
+			int	posindex;
+			inline const Vector* pPos(int i)
+				const {
+				assert(i >= 0 && i < numbones);
+				return reinterpret_cast<Vector*>((char*)this + posindex) + i;
+			}
+
+			int quatindex;
+			inline const Quaternion* pQuat(int i)
+				const {
+				assert(i >= 0 && i < numbones);
+				return reinterpret_cast<Quaternion*>((char*)this + quatindex) + i;
+			}
+
+			int rotindex;
+			inline const RadianEuler* pRot(int i)
+				const {
+				assert(i >= 0 && i < numbones);
+				return reinterpret_cast<RadianEuler*>((char*)this + rotindex) + i;
+			}
+
+			int posetoboneindex;
+			inline const matrix3x4_t* pPoseToBone(int i)
+				const {
+				assert(i >= 0 && i < numbones);
+				return reinterpret_cast<matrix3x4_t*>((char*)this + posetoboneindex) + i;
+			}
+		};
+
+		// this struct is unchanged from p2
+		struct mstudiosrcbonetransform_t
+		{
+			int			sznameindex;
+			matrix3x4_t	pretransform;
+			matrix3x4_t	posttransform;
+		};
+
 		union mstudioanimvalue_t
 		{
 			struct
@@ -3085,6 +3274,7 @@ namespace r5
 		};
 	}
 
+	// technically not v54 anymore
 	namespace v16
 	{
 		struct mstudioanimdesc_t

@@ -1,7 +1,14 @@
 #include <stdlib.h>
 #include <vector>
+#include <map>
 #include <string>
-#include <rpc.h>
+//#include <rpc.h>
+#include <guiddef.h>
+
+#include "../math/vector.h"
+#include "../math/vector2d.h"
+#include "../math/vector4d.h"
+#include "../math/vertexcolor.h"
 
 #pragma once
 
@@ -26,12 +33,11 @@ struct stringentry_t
 class CDataModelStringDict
 {
 public:
-	CDataModelStringDict();
 	int AddToStringDict(const char* string); // change type to int?
-	void WriteStringDict(char** pData); // write stringdict into dmx file buffer
-
 	int GetStringIndex(const char* string);
 	const char* StringFromIndex(int* index);
+
+	void WriteStringDict(char** pData); // write stringdict into dmx file buffer
 
 private:
 	int numStrings;
@@ -52,7 +58,7 @@ enum DmAttributeType_t : char
 	AT_INT = 2,
 	AT_FLOAT = 3,
 	AT_BOOL = 4,
-	AT_STRING = 5,
+	AT_STRING = 5, // int index for string dictionary
 	AT_VOID = 6,
 	AT_TIME = 7,
 	AT_COLOR = 8, //rgba
@@ -81,7 +87,13 @@ enum DmAttributeType_t : char
 	AT_VMATRIX_ARRAY = 28,
 	AT_TYPE_COUNT = 29,
 
-	AT_TYPE_INVALID = 0xff // unsure the actual value for this
+	AT_TYPE_INVALID // anything else should be this
+};
+
+// need this
+struct DmeTime_t
+{
+
 };
 
 struct DmxAttributeArray_t
@@ -90,81 +102,124 @@ struct DmxAttributeArray_t
 	void* attributeValues;
 };
 
-class CDataModelAttribute
+#pragma pack(push, 1)
+struct DmxAttribute_t
 {
-public:
-	CDataModelAttribute(int name, char type, void* value);
-
-	int ValueSizeFromType();
-
-	void WriteAttribute(char** pDatax);
-
-private:
 	int attributeName; // string dictionary index
-	char attributeType; // DmAttributeType_t
-	
+	DmAttributeType_t attributeType; // DmAttributeType_t
+};
+#pragma pack(pop)
+
+struct DmAttribute
+{
 	void* attributeValue;
+	int attributeName; // string dictionary index
+	DmAttributeType_t attributeType; // DmAttributeType_t
+
+	const char* attributeNameStr;
+
+	void WriteAttributeValue(char** pData);
 };
 
 class CDataModelAttributeList
 {
 public:
-	void AddAttribute(int name, char type, void* value);
+	void AddAttribute(int* name, char* nameStr, DmAttributeType_t* type, void* value);
+	void AddAttribute(DmAttribute* attribute);
+	DmAttribute* GetAttribute(char* nameStr);
 
+	//int GetAttributeValueSize(DmAttribute* attribute);
+	int GetAttributeCount();
+
+	// accessor funcs
+	int* pNumAttributes();
+	std::map<const char*, DmAttribute*>* pAttributes();
+
+	// reading/writing
 	void WriteAttributeList(char** pData);
 
 private:
 	int numAttributes;
-	std::vector<CDataModelAttribute> Attributes;
+	std::map<const char*, DmAttribute*> Attributes;
 };
 
 
-//========================
-// DataModel Element List
-//========================
+//===================
+// DataModel Element
+//===================
 struct DmxElement_t
 {
-	int type; // string dictionary index
-	int name; // string dictionary index
-	UUID uuid; // little-endian, this is GUID/UUID type I think
+	int elementType; // string dict index of type string
+	int elementName; // string dict index of name string
+	GUID elementId; // unique id for this element
 };
 
-class CDataModelElementList
+struct DmElement
 {
-public:
-	DmxElement_t* pElement(int index);
-	CDataModelAttributeList* pAttributeList(int index);
+	int elementType; // string dict index of type string
+	int elementName; // string dict index of name string
+	GUID elementId; // unique id for this element
 
-	int AddElement(int type, int name, UUID& uuid, CDataModelAttributeList& attributes);
-
-	void WriteElementList(char** pData);
-
-private:
-	int numElements;
-	std::vector<DmxElement_t> Elements;
-	std::vector<CDataModelAttributeList> AttributeList; // should match the total number of elements
+	int elementIndex; // index in the ElementList array
+	const char* elementTypeStr;
+	const char* elementNameStr;
+	int elementSet; // if there are duplicate sets of elements, which is this one in?
+	size_t elementHash;
 };
 
 
 //===========
 // DataModel
 //===========
+enum class DataModelType_t
+{
+	DM_MODEL,
+	DM_ANIMATION,
+	DM_PARTICLE // unused for now likely
+};
+
 class CDataModel
 {
 public:
-	CDataModel(const char* header); // will set header on creation
+	CDataModel(DataModelType_t datamodelType); // will set header on creation
+	~CDataModel();
+
+	// element
+	size_t GetElementHash(DmElement* element);
+	size_t GetElementHash(char* type, char* name, int* set);
+	int AddElement(DmElement* element, CDataModelAttributeList* list);
+	DmElement* GetElement(size_t* hash);
+	DmElement* GetElement(int* index);
+	int GetElementIndex(size_t* hash);
+
+	// attributes
+	int AddAttributeList(CDataModelAttributeList* list);
+	CDataModelAttributeList* GetAttributeList(int* index);
 
 	// accessor funcs
+	DataModelType_t* pDataModelType();
+	DmElement* pRootElement();
+	CDataModelAttributeList* pRootAttributeList();
+
 	std::string* pHeader();
 	CDataModelStringDict* pStringDict();
-	CDataModelElementList* pElementList();
+	std::map<size_t, DmElement*>* pElementList();
+	std::vector<CDataModelAttributeList*>* pAttributeList();
 
+	// writing/reading
 	void WriteDataModel(char** pData);
 
-private:
-	std::string DMXHeader;
-	CDataModelStringDict StringDict;
-	CDataModelElementList ElementList;
-};
+private: // these need better packing (?)
+	// interal
+	DataModelType_t dataModelType;
+	DmElement* rootElement;
+	CDataModelAttributeList* rootAttributeList;
 
-void DMXFromMDL(char* pMdlBuf, const std::string fileDir);
+	// for writing
+	std::string dataModelHeader;
+	CDataModelStringDict stringDict;
+
+	int numElements;
+	std::map<size_t, DmElement*> elementList;
+	std::vector<CDataModelAttributeList*> attributeList; // should match the total number of elements
+};

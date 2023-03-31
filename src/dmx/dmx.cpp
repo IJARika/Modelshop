@@ -1,26 +1,17 @@
-#include <vector>
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <filesystem>
+//#include <vector>
+//#include <stdio.h>
+//#include <iostream>
+//#include <fstream>
+//#include <filesystem>
 
+#include "../shareddefs.h"
 #include "../utils.h"
 #include "dmx.h"
-#include "../studio/studio.h"
-//#include "../math/vector2d.h"
-//#include "../math/vertexcolor.h"
 
 
 //=============================
 // DataModel String Dictionary
 //=============================
-CDataModelStringDict::CDataModelStringDict()
-{
-	// this can be removed because it's an extra byte if never used
-	/*strings.push_back(stringentry_t{ "", 0 });
-	numStrings = 1;*/
-}
-
 int CDataModelStringDict::AddToStringDict(const char* string)
 {
 	int entryIdx = 0;
@@ -40,23 +31,6 @@ int CDataModelStringDict::AddToStringDict(const char* string)
 	numStrings++;
 
 	return entryIdx;
-}
-
-void CDataModelStringDict::WriteStringDict(char** pData)
-{
-	//int* stringCount = reinterpret_cast<int*>(*pData);
-	//*stringCount = numStrings;
-	*reinterpret_cast<int*>(*pData) = numStrings;
-	*pData += sizeof(numStrings);
-
-	for (auto& entry : strings)
-	{
-		int strLength = strnlen_s(entry.string, MAX_PATH_SOURCE) + 1;
-
-		strcpy_s(*pData, strLength, entry.string);
-
-		*pData += strLength;
-	}
 }
 
 int CDataModelStringDict::GetStringIndex(const char* string)
@@ -79,293 +53,458 @@ const char* CDataModelStringDict::StringFromIndex(int* index)
 	return strings.at(*index).string;
 }
 
+void CDataModelStringDict::WriteStringDict(char** pData)
+{
+	//int* stringCount = reinterpret_cast<int*>(*pData);
+	//*stringCount = numStrings;
+	*reinterpret_cast<int*>(*pData) = numStrings;
+	*pData += sizeof(numStrings);
+
+	for (auto& entry : strings)
+	{
+		int strLength = strnlen_s(entry.string, MAX_PATH_SOURCE) + 1;
+
+		strcpy_s(*pData, strLength, entry.string);
+
+		*pData += strLength;
+	}
+}
+
 
 //==========================
 // DataModel Attribute List
 //==========================
-CDataModelAttribute::CDataModelAttribute(int name, char type, void* value)
-{
-	attributeName = name;
-	attributeType = type;
-	attributeValue = &value;
-}
 
-// unfinished
-int CDataModelAttribute::ValueSizeFromType()
+void DmAttribute::WriteAttributeValue(char** pData)
 {
-	int valueSize = 0;
-
 	switch (attributeType)
 	{
-	case AT_VOID:
-		valueSize = 0; // not correct
-		break;
-	case AT_BOOL:
-		valueSize = 1;
+	case AT_UNKNOWN:
 		break;
 	case AT_ELEMENT:
+		break;
 	case AT_INT:
+		*reinterpret_cast<int*>(*pData) = *static_cast<int*>(attributeValue);
+		*pData += sizeof(int);
+		break;
 	case AT_FLOAT:
+		break;
+	case AT_BOOL:
+		break;
 	case AT_STRING:
-		valueSize = 4;
+		break;
+	case AT_VOID:
+		*reinterpret_cast<int*>(*pData) = 0;
+		*pData += 4;
+		break;
+	case AT_TIME:
+		break;
+	case AT_COLOR:
+		break;
+	case AT_VECTOR2:
+		break;
+	case AT_VECTOR3:
+		break;
+	case AT_VECTOR4:
+		break;
+	case AT_QANGLE:
+		break;
+	case AT_QUATERNION:
+		break;
+	case AT_VMATRIX:
+		break;
+	case AT_ELEMENT_ARRAY:
+		break;
+	case AT_INT_ARRAY:
+		break;
+	case AT_FLOAT_ARRAY:
+		break;
+	case AT_BOOL_ARRAY:
+		break;
+	case AT_STRING_ARRAY:
+		break;
+	case AT_VOID_ARRAY:
+		break;
+	case AT_TIME_ARRAY:
+		break;
+	case AT_COLOR_ARRAY:
+		break;
+	case AT_VECTOR2_ARRAY:
+		break;
+	case AT_VECTOR3_ARRAY:
+		break;
+	case AT_VECTOR4_ARRAY:
+		break;
+	case AT_QANGLE_ARRAY:
+		break;
+	case AT_QUATERNION_ARRAY:
+		break;
+	case AT_VMATRIX_ARRAY:
+		break;
+	case AT_TYPE_COUNT:
+		break;
+	case AT_TYPE_INVALID:
 		break;
 	default:
-		Error("error: unknown attribute type used!!!");
 		break;
 	}
-
-	return valueSize;
 }
 
-void CDataModelAttribute::WriteAttribute(char** pData)
+void CDataModelAttributeList::AddAttribute(int* name, char* nameStr, DmAttributeType_t* type, void* value)
 {
-	memcpy(*pData, &attributeName, sizeof(attributeName) + sizeof(attributeType));
-	*pData += sizeof(attributeName) + sizeof(attributeType);
+	if (Attributes.count(nameStr))
+	{
+		Error("Tried to add same attribute more than once!");
+	}
 
-	// too be tested
-	int valueSize = ValueSizeFromType();
-	memcpy(*pData, &attributeValue, valueSize);
-	*pData += valueSize;
-}
+	DmAttribute* newAttribute{};
 
-void CDataModelAttributeList::AddAttribute(int name, char type, void* value)
-{
-	CDataModelAttribute newAttribute{ name, type, value };
-	Attributes.push_back(newAttribute);
+	newAttribute->attributeName = *name;
+	newAttribute->attributeNameStr = nameStr;
+	newAttribute->attributeType = *type;
+	newAttribute->attributeValue = value;
+
+	Attributes.emplace(nameStr, newAttribute);
 
 	numAttributes++;
 }
 
-void CDataModelAttributeList::WriteAttributeList(char** pData)
+void CDataModelAttributeList::AddAttribute(DmAttribute* attribute)
 {
-	memcpy(*pData, &numAttributes, sizeof(numAttributes));
-	*pData += sizeof(numAttributes);
-
-	for (auto& attribute : Attributes)
+	if (Attributes.count(attribute->attributeNameStr))
 	{
-		attribute.WriteAttribute(pData);
-	}
-}
-
-
-//========================
-// DataModel Element List
-//========================
-DmxElement_t* CDataModelElementList::pElement(int index)
-{
-	return &Elements.at(index);
-}
-
-CDataModelAttributeList* CDataModelElementList::pAttributeList(int index)
-{
-	return &AttributeList.at(index);
-}
-
-int CDataModelElementList::AddElement(int type, int name, UUID& uuid, CDataModelAttributeList& attributes)
-{
-	DmxElement_t newElement{ type, name, uuid };
-	Elements.push_back(newElement);
-	AttributeList.push_back(attributes);
-
-	numElements++;
-
-	return std::distance(Elements.begin(), Elements.end()); // this may not work as intended, if encountering a bug with indexes check here
-}
-
-void CDataModelElementList::WriteElementList(char** pData)
-{
-	memcpy(*pData, &numElements, sizeof(numElements));
-	*pData += sizeof(numElements);
-	
-	/*memcpy(*pData, &elements, sizeof(DmxElement_t) * elements.size());
-	*pData += sizeof(DmxElement_t) * elements.size();*/
-
-	for (auto& element : Elements)
-	{
-		memcpy(*pData, &element, sizeof(DmxElement_t));
-		*pData += sizeof(DmxElement_t);
+		Error("Tried to add same attribute more than once!");
 	}
 
-	for (auto& attributelist : AttributeList)
-	{
-		attributelist.WriteAttributeList(pData);
-	}
+	DmAttribute* newAttribute = new DmAttribute;
+
+	*newAttribute = *attribute;
+
+	Attributes.emplace(newAttribute->attributeNameStr, newAttribute);
+
+	numAttributes++;
+}
+
+DmAttribute* CDataModelAttributeList::GetAttribute(char* nameStr)
+{
+	return Attributes.find(nameStr)->second;
+}
+
+// unfinished
+//int CDataModelAttributeList::GetAttributeValueSize(DmAttribute* attribute)
+//{
+//	int valueSize = 0;
+//
+//	int arraySize = reinterpret_cast<int>(attribute->attributeValue); // do not read this unless array
+//
+//	switch (attribute->attributeType)
+//	{
+//	case AT_ELEMENT:
+//	case AT_INT:
+//	case AT_FLOAT:
+//		valueSize = sizeof(int); // float should be 4 bytes
+//		break;
+//	case AT_BOOL:
+//		valueSize = sizeof(bool);
+//		break;
+//	case AT_STRING:
+//	case AT_VOID:
+//		valueSize = sizeof(int);
+//		break;
+//	case AT_TIME:
+//		valueSize = sizeof(DmeTime_t);
+//		Error("error: attribute type 'AT_TIME' not currently supported!!!");
+//		break;
+//	case AT_COLOR:
+//		valueSize = sizeof(VertexColor_t);
+//		break;
+//	case AT_VECTOR2:
+//		valueSize = sizeof(Vector2D);
+//		break;
+//	case AT_VECTOR3:
+//		valueSize = sizeof(Vector);
+//		break;
+//	case AT_VECTOR4:
+//		valueSize = sizeof(Vector4D);
+//		break;
+//	case AT_QANGLE:
+//		valueSize = sizeof(QAngle);
+//		break;
+//	case AT_QUATERNION:
+//		valueSize = sizeof(Quaternion);
+//		break;
+//	case AT_VMATRIX:
+//		//valueSize = 0;
+//		Error("error: attribute type 'AT_VMATRIX' not currently supported!!!");
+//		break;
+//	case AT_ELEMENT_ARRAY:
+//	case AT_INT_ARRAY:
+//	case AT_FLOAT_ARRAY:
+//	case AT_BOOL_ARRAY: // this one may not be right
+//		valueSize = sizeof(int) * (arraySize + 1);
+//		break;
+//	case AT_STRING_ARRAY:
+//		Error("error: attribute type 'AT_STRING_ARRAY' not currently supported!!!"); // unsure how to do this currently
+//		break;
+//	case AT_VOID_ARRAY:
+//		valueSize = sizeof(int); // whar
+//		break;
+//	case AT_TIME_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(DmeTime_t) * arraySize);
+//		break;
+//	case AT_COLOR_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(VertexColor_t) * arraySize);
+//		break;
+//	case AT_VECTOR2_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(Vector2D) * arraySize);
+//		break;
+//	case AT_VECTOR3_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(Vector) * arraySize);
+//		break;
+//	case AT_VECTOR4_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(Vector4D) * arraySize);
+//		break;
+//	case AT_QANGLE_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(QAngle) * arraySize);
+//		break;
+//	case AT_QUATERNION_ARRAY:
+//		valueSize = sizeof(int) + (sizeof(Quaternion) * arraySize);
+//		break;
+//	case AT_VMATRIX_ARRAY:
+//		//valueSize = sizeof(int) + (sizeof(QAngle) * arraySize);
+//		Error("error: attribute type 'AT_VMATRIX_ARRAY' not currently supported!!!");
+//		break;
+//	default:
+//		Error("error: unknown attribute type used!!!");
+//		break;
+//	}
+//
+//	return valueSize;
+//}
+
+int CDataModelAttributeList::GetAttributeCount()
+{
+	return numAttributes;
+}
+
+// accessor funcs
+int* CDataModelAttributeList::pNumAttributes()
+{
+	return &numAttributes;
+}
+
+std::map<const char*, DmAttribute*>* CDataModelAttributeList::pAttributes()
+{
+	return &Attributes;
 }
 
 
 //===========
 // DataModel
 //===========
-CDataModel::CDataModel(const char* header)
+CDataModel::CDataModel(DataModelType_t type)
 {
-	DMXHeader = header;
+	dataModelType = type;
+
+	switch (dataModelType)
+	{
+	case DataModelType_t::DM_MODEL:
+		dataModelHeader = "<!-- dmx encoding binary 5 format model 18 -->\n";
+		break;
+	case DataModelType_t::DM_ANIMATION:
+		dataModelHeader = "<!-- dmx encoding binary 5 format model 18 -->\n";
+		break;
+	case DataModelType_t::DM_PARTICLE:
+		dataModelHeader = "<!-- dmx encoding binary 5 format pcf 2 -->";
+		break;
+	default:
+		break;
+	}
+
+	rootElement = new DmElement;
+	rootAttributeList = new CDataModelAttributeList;
+
+	rootElement->elementType = pStringDict()->AddToStringDict("DmElement");
+	rootElement->elementName = pStringDict()->AddToStringDict("root");
+	// funny id
+	rootElement->elementIndex = elementList.size(); // this is the root element, it should always be 0.
+	rootElement->elementTypeStr = "DmElement";
+	rootElement->elementNameStr = "root";
+	rootElement->elementSet = 0;
+	rootElement->elementHash = GetElementHash(rootElement);
+
+	elementList.emplace(rootElement->elementHash, rootElement);
+	AddAttributeList(rootAttributeList);
+
+	numElements = 1;
 }
 
+CDataModel::~CDataModel()
+{
+	for (auto& element : elementList)
+	{
+		delete element.second;
+	}
+
+	for (auto& list : attributeList)
+	{
+		for (auto& attribute : *list->pAttributes())
+		{
+			delete attribute.second;
+
+		}
+
+		delete list;
+	}
+}
+
+// may need tweaking
+// element
+size_t CDataModel::GetElementHash(DmElement* element)
+{
+	char str[MAX_PATH_SOURCE];
+
+	sprintf_s(str, MAX_PATH_SOURCE, "%s_%s_%i", element->elementTypeStr, element->elementNameStr, element->elementSet);
+
+	return std::hash<char*>{}(str);
+}
+
+size_t CDataModel::GetElementHash(char* type, char* name, int* set)
+{
+	char str[MAX_PATH_SOURCE];
+
+	sprintf_s(str, MAX_PATH_SOURCE, "%s_%s_%i", type, name, *set);
+
+	return std::hash<char*>{}(str);
+}
+
+// list part may need to be removed as it should be a given, and we should just add attributes to it after
+int CDataModel::AddElement(DmElement* element, CDataModelAttributeList* list)
+{
+	if (elementList.count(element->elementHash))
+		return elementList.find(element->elementHash)->second->elementIndex;
+
+	DmElement* newElement = new DmElement;
+	CDataModelAttributeList* newList = new CDataModelAttributeList;
+
+	*newElement = *element;
+
+	newElement->elementIndex = elementList.size();
+	elementList.emplace(newElement->elementHash, newElement);
+	attributeList.push_back(newList);
+
+	numElements++;
+
+	return element->elementIndex;
+}
+
+DmElement* CDataModel::GetElement(size_t* hash)
+{
+	return elementList.find(*hash)->second;
+}
+
+// this will not work as expected
+DmElement* CDataModel::GetElement(int* index)
+{
+	return elementList.at(*index);
+}
+
+int CDataModel::GetElementIndex(size_t* hash)
+{
+	return elementList.find(*hash)->second->elementIndex;
+}
+
+
+// attributes
+// unsure why I added this
+int CDataModel::AddAttributeList(CDataModelAttributeList* list)
+{
+	attributeList.push_back(list);
+	return attributeList.size() - 1;
+}
+
+CDataModelAttributeList* CDataModel::GetAttributeList(int* index)
+{
+	return attributeList.at(*index);
+}
+
+
 // accessor funcs
+DataModelType_t* CDataModel::pDataModelType()
+{
+	return &dataModelType;
+}
+
+DmElement* CDataModel::pRootElement()
+{
+	return rootElement;
+}
+
+CDataModelAttributeList* CDataModel::pRootAttributeList()
+{
+	return rootAttributeList;
+}
+
+
 std::string* CDataModel::pHeader()
 {
-	return &DMXHeader;
+	return &dataModelHeader;
 }
 
 CDataModelStringDict* CDataModel::pStringDict()
 {
-	return &StringDict;
+	return &stringDict;
 }
 
-CDataModelElementList* CDataModel::pElementList()
+std::map<size_t, DmElement*>* CDataModel::pElementList()
 {
-	return &ElementList;
+	return &elementList;
 }
 
+std::vector<CDataModelAttributeList*>* CDataModel::pAttributeList()
+{
+	return &attributeList;
+}
+
+
+// write / read
 void CDataModel::WriteDataModel(char** pData)
 {
-	strcpy_s(*pData, DMXHeader.length() + 1, DMXHeader.c_str());
+	strcpy_s(*pData, dataModelHeader.length() + 1, dataModelHeader.c_str()); // redo this
+	*pData += dataModelHeader.length() + 1;
 
-	*pData += DMXHeader.length() + 1;
+	stringDict.WriteStringDict(pData);
 
-	StringDict.WriteStringDict(pData);
+	memcpy_s(*pData, sizeof(int), &numElements, sizeof(int));
+	*pData += sizeof(int);
 
-	ElementList.WriteElementList(pData);
-}
-
-
-void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeader_t* pVVC, int lod, std::vector<const vvd::mstudiovertex_t*> &vvdVerts, std::vector<const VertexColor_t*> &vvcColors, std::vector<const Vector2D*> &vvcUV2s)
-{
-	// rebuild vertex vector per lod just incase it has fixups
-	if (pVVD->numFixups)
+	for (auto& element : elementList)
 	{
-		for (int j = 0; j < pVVD->numFixups; j++)
+		DmxElement_t* newElement = reinterpret_cast<DmxElement_t*>(*pData);
+
+		newElement->elementType = element.second->elementType;
+		newElement->elementName = element.second->elementName;
+		newElement->elementId = element.second->elementId;
+
+		*pData += sizeof(DmxElement_t);
+	}
+
+	for (auto& list : attributeList)
+	{
+		*reinterpret_cast<int*>(*pData) = list->GetAttributeCount();
+		*pData += sizeof(int);
+
+		for (auto& attribute : *list->pAttributes())
 		{
-			const vvd::vertexFileFixup_t* vertexFixup = pVVD->GetFixupData(j);
+			DmxAttribute_t* newAttribute = reinterpret_cast<DmxAttribute_t*>(*pData);
 
-			if (vertexFixup->lod >= lod)
-			{
-				for (int k = 0; k < vertexFixup->numVertexes; k++)
-				{
-					const vvd::mstudiovertex_t* vvdVert = pVVD->GetVertexData(vertexFixup->sourceVertexID + k);
+			newAttribute->attributeName = attribute.second->attributeName;
+			newAttribute->attributeType = attribute.second->attributeType;
 
-					vvdVerts.push_back(vvdVert);
+			*pData += sizeof(DmxAttribute_t);
 
-					// vvc
-					if (pVVC)
-					{
-						// doesn't matter which we pack as long as it has vvc, we will only used what's needed later
-						const VertexColor_t* vvcColor = pVVC->GetColorData(vertexFixup->sourceVertexID + k);
-						const Vector2D* vvcUV2 = pVVC->GetUVData(vertexFixup->sourceVertexID + k);
+			attribute.second->WriteAttributeValue(pData);
 
-						vvcColors.push_back(vvcColor);
-						vvcUV2s.push_back(vvcUV2);
-					}
-				}
-			}
-		}
-	}
-	else
-	{
-		// using per lod vertex count may have issues (tbd)
-		for (int j = 0; j < pVVD->numLODVertexes[lod]; j++)
-		{
-			const vvd::mstudiovertex_t* vvdVert = pVVD->GetVertexData(j);
-
-			vvdVerts.push_back(vvdVert);
-
-			// vvc
-			if (pVVC)
-			{
-				// doesn't matter which we pack as long as it has vvc, we will only used what's needed later
-				const VertexColor_t* vvcColor = pVVC->GetColorData(j);
-				const Vector2D* vvcUV2 = pVVC->GetUVData(j);
-
-				vvcColors.push_back(vvcColor);
-				vvcUV2s.push_back(vvcUV2);
-			}
-		}
-	}
-}
-
-// bad name for what this does
-void DMXBuildSkeletonR2(CDataModel* dmx, r2::studiohdr_t* pHdr)
-{
-	UUID rootUUID;
-	CDataModelAttributeList rootList;
-
-	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("DmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
-
-	dmx->pElementList()->pAttributeList(0)->AddAttribute(dmx->pStringDict()->AddToStringDict("PISS"), 6, nullptr);
-}
-
-// adjusts dmx file name for export, this is really bad lol
-void DMXRenameLODs(std::string &fileName, int lodIdx)
-{
-	char lodName[8] = "";
-	snprintf(lodName, 8, "_lod%i", lodIdx);
-
-	if (fileName.rfind("_lod0") != std::string::npos)
-	{
-		fileName.replace(fileName.length() - 5, 8, lodName);
-	}
-	else
-	{
-		fileName.append(lodName);
-	}
-}
-
-void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
-{
-	// setup required bufferes
-	r2::studiohdr_t* pHdr = reinterpret_cast<r2::studiohdr_t*>(pMdlBuf);
-	vtx::FileHeader_t* pVtx = pHdr->pVTX();
-	vvd::vertexFileHeader_t* pVVD = pHdr->pVVD();
-	vvc::vertexColorFileHeader_t* pVVC = pHdr->pVVC();
-
-	for (int lodIdx = 0; lodIdx < pVtx->numLODs; lodIdx++)
-	{
-		std::vector<const vvd::mstudiovertex_t*> vvdVerts;
-		std::vector<const VertexColor_t*> vvcColors;
-		std::vector<const Vector2D*> vvcUV2s;
-
-		GetVertexesFromVVD(pVVD, pVVC, lodIdx, vvdVerts, vvcColors, vvcUV2s);
-
-		for (int bodypartIdx = 0; bodypartIdx < pHdr->numbodyparts; bodypartIdx++)
-		{
-			r2::mstudiobodyparts_t* pBodypart = pHdr->pBodypart(bodypartIdx);
-			vtx::BodyPartHeader_t* pVtxBodyPart = pVtx->pBodyPart(bodypartIdx);
-
-			for (int modelIdx = 0; modelIdx < pBodypart->nummodels; modelIdx++)
-			{
-				r2::mstudiomodel_t* pModel = pBodypart->pModel(modelIdx);
-				vtx::ModelHeader_t* pVtxModel = pVtxBodyPart->pModel(modelIdx);
-
-				if (!pModel->nummeshes)
-				{
-					continue;
-				}
-
-				vtx::ModelLODHeader_t* pVtxLOD = pVtxModel->pLOD(lodIdx);
-
-				CDataModel dmxOut("<!-- dmx encoding binary 5 format model 18 -->\n");
-
-				DMXBuildSkeletonR2(&dmxOut, pHdr);
-
-				char* pBase = new char[FILEBUFSIZE];
-				char* pData = pBase;
-
-				dmxOut.WriteDataModel(&pData);
-
-				std::string fileName = GET_FILE_STEM(pModel->name);
-				
-				if (lodIdx > 0)
-				{
-					DMXRenameLODs(fileName, lodIdx);
-				}
-
-				fileName.append(".dmx");
-				
-				std::string fileOutPath = std::filesystem::path(fileDir).append(fileName).u8string();		
-
-				std::ofstream dmxFile(fileOutPath, std::ios::out | std::ios::binary);				
-				dmxFile.write(pBase, pData - pBase);
-			}
 		}
 	}
 }

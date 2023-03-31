@@ -3,8 +3,6 @@
 
 #pragma once
 
-#define MAX_PATH_SOURCE		256 // respawn may have changed this
-
 #define GET_FILE_NAME(filePath) std::filesystem::path(filePath).filename().u8string()
 #define GET_FILE_STEM(filePath) std::filesystem::path(filePath).stem().u8string()
 #define GET_FILE_EXTN(filePath) std::filesystem::path(filePath).extension().u8string().substr(1, std::string::npos) // extension without '.'

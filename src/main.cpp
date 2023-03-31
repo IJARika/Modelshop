@@ -3,7 +3,7 @@
 #include <fstream>
 
 #include "utils.h"
-#include "dmx/dmx.h"
+#include "studio/studio_extract.h"
 
 int main(int argc, char** argv)
 {

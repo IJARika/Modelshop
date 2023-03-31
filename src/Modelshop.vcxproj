@@ -146,6 +146,7 @@
     <ClCompile Include="math\mathlib.cpp" />
     <ClCompile Include="studio\bone_setup.cpp" />
     <ClCompile Include="studio\studio.cpp" />
+    <ClCompile Include="studio\studio_extract.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dmx\dmx.h" />
@@ -156,8 +157,10 @@
     <ClInclude Include="math\vector4d.h" />
     <ClInclude Include="math\vector_test.h" />
     <ClInclude Include="math\vertexcolor.h" />
+    <ClInclude Include="shareddefs.h" />
     <ClInclude Include="studio\bone_setup.h" />
     <ClInclude Include="studio\studio.h" />
+    <ClInclude Include="studio\studio_extract.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

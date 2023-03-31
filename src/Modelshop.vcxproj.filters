@@ -1,3 +1,90 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="studio\bone_setup.cpp">
+      <Filter>Source Files\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="studio\studio.cpp">
+      <Filter>Source Files\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="math\mathlib.cpp">
+      <Filter>Source Files\math</Filter>
+    </ClCompile>
+    <ClCompile Include="dmx\dmx.cpp">
+      <Filter>Source Files\dmx</Filter>
+    </ClCompile>
+    <ClCompile Include="studio\studio_extract.cpp">
+      <Filter>Source Files\studio</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\mathlib.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector2d.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector_test.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector4d.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vertexcolor.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="studio\bone_setup.h">
+      <Filter>Header Files\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="studio\studio.h">
+      <Filter>Header Files\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="math\compressed_vector.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="dmx\dmx.h">
+      <Filter>Header Files\dmx</Filter>
+    </ClInclude>
+    <ClInclude Include="studio\studio_extract.h">
+      <Filter>Header Files\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="shareddefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{5a4f62e7-b80b-4726-8090-ab0cc28ecb2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{88023852-4161-4b8d-8d5f-a2d393b8df2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\math">
+      <UniqueIdentifier>{715954b3-3fea-41af-8798-665148378736}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\studio">
+      <UniqueIdentifier>{a209add7-8f45-4e30-9725-281c668db094}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\dmx">
+      <UniqueIdentifier>{8acb8795-d944-41c7-8c9c-118a7c2ea3b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\studio">
+      <UniqueIdentifier>{bfe98cf1-581a-4672-8332-d0c2d5a7e2f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\math">
+      <UniqueIdentifier>{3da7185c-3b58-4dba-b477-5e10f199f6b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\dmx">
+      <UniqueIdentifier>{694a51df-2ea1-4b0d-adf1-f6fa267d8109}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
 </Project>
