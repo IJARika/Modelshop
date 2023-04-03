@@ -1,6 +1,13 @@
 #pragma once
 
-#define MAX_PATH_SOURCE		256 // respawn may have changed this
+// Modelshop version
+#define VERSION_MAJOR		0
+#define VERSION_MINOR		0
+#define VERSION_REVISION	1
+
+
+#define MAX_PATH_SOURCE		512 // respawn may have changed this
+								// adjust as needed
 
 // ---------------------------
 //  Hit Group standards

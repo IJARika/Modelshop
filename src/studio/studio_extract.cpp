@@ -7,9 +7,10 @@
 #include <filesystem>
 
 #include "../utils.h"
-#include "../dmx/dmx.h"
+#include "../datamodel/datamodel.h"
+#include "../datamodel/datamodel_element.h"
 #include "../studio/studio.h"
-#include "studio_extract.h"
+#include "../studio/studio_extract.h"
 
 // adjusts dmx file name for export, this is really bad lol
 void DMXRenameLODs(std::string& fileName, int lodIdx)
@@ -34,17 +35,28 @@ void DMXBuildSkeletonR2(CDataModel* dmx, r2::studiohdr_t* pHdr)
 	int lefunnitrol = 0;
 
 	newAttribute.attributeName = dmx->pStringDict()->AddToStringDict("test");
-	newAttribute.attributeType = DmAttributeType_t::AT_VOID;
-	newAttribute.attributeValue = &lefunnitrol;
+	newAttribute.attributeType = DmAttributeType_t::AT_STRING_ARRAY;
+	//newAttribute.attributeValue = &lefunnitrol;
 	newAttribute.attributeNameStr = "test";
 
+	std::vector<void*> alittlebitoftrolling;
+
+	/*alittlebitoftrolling.push_back(&pHdr->flags);
+	alittlebitoftrolling.push_back(&pHdr->checksum);
+	alittlebitoftrolling.push_back(&pHdr->version);*/
+
+	alittlebitoftrolling.push_back(pHdr->pszName());
+	alittlebitoftrolling.push_back(pHdr->pszSourceFiles());
+
+	newAttribute.attributeValues = alittlebitoftrolling;
+	newAttribute.numValues = 2;
 
 	dmx->pRootAttributeList()->AddAttribute(&newAttribute);
 
 	/*UUID rootUUID;
 	CDataModelAttributeList rootList;
 
-	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("DmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
+	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("CDmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
 
 	dmx->pElementList()->pAttributeList(0)->AddAttribute(dmx->pStringDict()->AddToStringDict("PISS"), 6, nullptr);*/
 }
@@ -138,7 +150,12 @@ void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 
 				CDataModel dmxOut(DataModelType_t::DM_MODEL);
 
-				DMXBuildSkeletonR2(&dmxOut, pHdr);
+				CDmeModel* dmxModel = new CDmeModel(&dmxOut);
+
+				dmxModel->AddAsSkeleton();
+				dmxModel->AddAsModel();
+
+				//DMXBuildSkeletonR2(&dmxOut, pHdr);
 
 				char* pBase = new char[FILEBUFSIZE];
 				char* pData = pBase;
@@ -158,6 +175,8 @@ void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 
 				std::ofstream dmxFile(fileOutPath, std::ios::out | std::ios::binary);
 				dmxFile.write(pBase, pData - pBase);
+
+				delete dmxModel;
 			}
 		}
 	}

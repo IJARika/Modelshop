@@ -6,12 +6,13 @@
 
 #include "../shareddefs.h"
 #include "../utils.h"
-#include "dmx.h"
+#include "../datamodel/datamodel.h"
 
 
 //=============================
 // DataModel String Dictionary
 //=============================
+
 int CDataModelStringDict::AddToStringDict(const char* string)
 {
 	int entryIdx = 0;
@@ -75,77 +76,130 @@ void CDataModelStringDict::WriteStringDict(char** pData)
 // DataModel Attribute List
 //==========================
 
+// thank you amogus
+template<class T>
+__forceinline void DmAttribute::WriteAttributeValue(char** pData, void* attrVal, int attrOptSize)
+{
+	*reinterpret_cast<T*>(*pData) = *reinterpret_cast<T*>(attrVal);
+
+	if (attrOptSize > -1)
+		*pData += attrOptSize;
+	else
+		*pData += sizeof(T);
+}
+
+template<class T>
+void DmAttribute::WriteAttributeArray(char** pData, int* numVals, std::vector<void*> attrVals, int attrOptSize)
+{
+	*reinterpret_cast<int*>(*pData) = *numVals;
+	*pData += sizeof(int);
+
+	for (auto& value : attrVals)
+	{
+		WriteAttributeValue<T>(pData, value);
+	}
+}
+
 void DmAttribute::WriteAttributeValue(char** pData)
 {
 	switch (attributeType)
 	{
 	case AT_UNKNOWN:
+		Error("Attribute used unknown type!\n");
 		break;
 	case AT_ELEMENT:
-		break;
 	case AT_INT:
-		*reinterpret_cast<int*>(*pData) = *static_cast<int*>(attributeValue);
-		*pData += sizeof(int);
+		WriteAttributeValue<int>(pData, attributeValue);
 		break;
 	case AT_FLOAT:
+		WriteAttributeValue<float>(pData, attributeValue);
 		break;
 	case AT_BOOL:
+		WriteAttributeValue<bool>(pData, attributeValue);
 		break;
 	case AT_STRING:
-		break;
 	case AT_VOID:
-		*reinterpret_cast<int*>(*pData) = 0;
-		*pData += 4;
+		WriteAttributeValue<int>(pData, attributeValue);
 		break;
 	case AT_TIME:
+		Error("Attribute 'AT_TIME' not fully implemented\n");
+		WriteAttributeValue<DmeTime_t>(pData, attributeValue);
 		break;
 	case AT_COLOR:
+		WriteAttributeValue<VertexColor_t>(pData, attributeValue);
 		break;
 	case AT_VECTOR2:
+		WriteAttributeValue<Vector2D>(pData, attributeValue);
 		break;
 	case AT_VECTOR3:
+		WriteAttributeValue<Vector>(pData, attributeValue);
 		break;
 	case AT_VECTOR4:
+		WriteAttributeValue<Vector4D>(pData, attributeValue);
 		break;
 	case AT_QANGLE:
+		WriteAttributeValue<QAngle>(pData, attributeValue);
 		break;
 	case AT_QUATERNION:
+		WriteAttributeValue<Quaternion>(pData, attributeValue);
 		break;
 	case AT_VMATRIX:
+		Error("Attribute 'AT_VMATRIX' not fully implemented\n");
 		break;
 	case AT_ELEMENT_ARRAY:
-		break;
 	case AT_INT_ARRAY:
+		WriteAttributeArray<int>(pData, &numValues, attributeValues);
 		break;
 	case AT_FLOAT_ARRAY:
+		WriteAttributeArray<float>(pData, &numValues, attributeValues);
 		break;
 	case AT_BOOL_ARRAY:
+		WriteAttributeArray<bool>(pData, &numValues, attributeValues);
 		break;
-	case AT_STRING_ARRAY:
+	case AT_STRING_ARRAY: // custom case for strings
+		*reinterpret_cast<int*>(*pData) = numValues;
+		*pData += sizeof(int);
+
+		for (auto& value : attributeValues)
+		{
+			strcpy_s(*pData, MAX_PATH_SOURCE, reinterpret_cast<char*>(value));
+			*pData += strnlen_s(reinterpret_cast<char*>(value), MAX_PATH_SOURCE) + 1;
+		}
 		break;
 	case AT_VOID_ARRAY:
+		WriteAttributeArray<int>(pData, &numValues, attributeValues);
 		break;
 	case AT_TIME_ARRAY:
+		Error("Attribute 'AT_TIME_ARRAY' not fully implemented\n");
+		WriteAttributeArray<DmeTime_t>(pData, &numValues, attributeValues);
 		break;
 	case AT_COLOR_ARRAY:
+		WriteAttributeArray<VertexColor_t>(pData, &numValues, attributeValues);
 		break;
 	case AT_VECTOR2_ARRAY:
+		WriteAttributeArray<Vector2D>(pData, &numValues, attributeValues);
 		break;
 	case AT_VECTOR3_ARRAY:
+		WriteAttributeArray<Vector>(pData, &numValues, attributeValues);
 		break;
 	case AT_VECTOR4_ARRAY:
+		WriteAttributeArray<Vector4D>(pData, &numValues, attributeValues);
 		break;
 	case AT_QANGLE_ARRAY:
+		WriteAttributeArray<QAngle>(pData, &numValues, attributeValues);
 		break;
 	case AT_QUATERNION_ARRAY:
+		WriteAttributeArray<Quaternion>(pData, &numValues, attributeValues);
 		break;
 	case AT_VMATRIX_ARRAY:
+		Error("Attribute 'AT_VMATRIX_ARRAY' not fully implemented\n");
 		break;
 	case AT_TYPE_COUNT:
+		Error("Attribute 'AT_TYPE_COUNT' not fully implemented\n");
 		break;
 	case AT_TYPE_INVALID:
-		break;
 	default:
+		Error("Attribute used invalid type!\n");
 		break;
 	}
 }
@@ -157,7 +211,7 @@ void CDataModelAttributeList::AddAttribute(int* name, char* nameStr, DmAttribute
 		Error("Tried to add same attribute more than once!");
 	}
 
-	DmAttribute* newAttribute{};
+	DmAttribute* newAttribute = new DmAttribute;
 
 	newAttribute->attributeName = *name;
 	newAttribute->attributeNameStr = nameStr;
@@ -190,98 +244,6 @@ DmAttribute* CDataModelAttributeList::GetAttribute(char* nameStr)
 	return Attributes.find(nameStr)->second;
 }
 
-// unfinished
-//int CDataModelAttributeList::GetAttributeValueSize(DmAttribute* attribute)
-//{
-//	int valueSize = 0;
-//
-//	int arraySize = reinterpret_cast<int>(attribute->attributeValue); // do not read this unless array
-//
-//	switch (attribute->attributeType)
-//	{
-//	case AT_ELEMENT:
-//	case AT_INT:
-//	case AT_FLOAT:
-//		valueSize = sizeof(int); // float should be 4 bytes
-//		break;
-//	case AT_BOOL:
-//		valueSize = sizeof(bool);
-//		break;
-//	case AT_STRING:
-//	case AT_VOID:
-//		valueSize = sizeof(int);
-//		break;
-//	case AT_TIME:
-//		valueSize = sizeof(DmeTime_t);
-//		Error("error: attribute type 'AT_TIME' not currently supported!!!");
-//		break;
-//	case AT_COLOR:
-//		valueSize = sizeof(VertexColor_t);
-//		break;
-//	case AT_VECTOR2:
-//		valueSize = sizeof(Vector2D);
-//		break;
-//	case AT_VECTOR3:
-//		valueSize = sizeof(Vector);
-//		break;
-//	case AT_VECTOR4:
-//		valueSize = sizeof(Vector4D);
-//		break;
-//	case AT_QANGLE:
-//		valueSize = sizeof(QAngle);
-//		break;
-//	case AT_QUATERNION:
-//		valueSize = sizeof(Quaternion);
-//		break;
-//	case AT_VMATRIX:
-//		//valueSize = 0;
-//		Error("error: attribute type 'AT_VMATRIX' not currently supported!!!");
-//		break;
-//	case AT_ELEMENT_ARRAY:
-//	case AT_INT_ARRAY:
-//	case AT_FLOAT_ARRAY:
-//	case AT_BOOL_ARRAY: // this one may not be right
-//		valueSize = sizeof(int) * (arraySize + 1);
-//		break;
-//	case AT_STRING_ARRAY:
-//		Error("error: attribute type 'AT_STRING_ARRAY' not currently supported!!!"); // unsure how to do this currently
-//		break;
-//	case AT_VOID_ARRAY:
-//		valueSize = sizeof(int); // whar
-//		break;
-//	case AT_TIME_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(DmeTime_t) * arraySize);
-//		break;
-//	case AT_COLOR_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(VertexColor_t) * arraySize);
-//		break;
-//	case AT_VECTOR2_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(Vector2D) * arraySize);
-//		break;
-//	case AT_VECTOR3_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(Vector) * arraySize);
-//		break;
-//	case AT_VECTOR4_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(Vector4D) * arraySize);
-//		break;
-//	case AT_QANGLE_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(QAngle) * arraySize);
-//		break;
-//	case AT_QUATERNION_ARRAY:
-//		valueSize = sizeof(int) + (sizeof(Quaternion) * arraySize);
-//		break;
-//	case AT_VMATRIX_ARRAY:
-//		//valueSize = sizeof(int) + (sizeof(QAngle) * arraySize);
-//		Error("error: attribute type 'AT_VMATRIX_ARRAY' not currently supported!!!");
-//		break;
-//	default:
-//		Error("error: unknown attribute type used!!!");
-//		break;
-//	}
-//
-//	return valueSize;
-//}
-
 int CDataModelAttributeList::GetAttributeCount()
 {
 	return numAttributes;
@@ -302,6 +264,7 @@ std::map<const char*, DmAttribute*>* CDataModelAttributeList::pAttributes()
 //===========
 // DataModel
 //===========
+
 CDataModel::CDataModel(DataModelType_t type)
 {
 	dataModelType = type;
@@ -337,6 +300,11 @@ CDataModel::CDataModel(DataModelType_t type)
 	AddAttributeList(rootAttributeList);
 
 	numElements = 1;
+}
+
+CDataModel::CDataModel()
+{
+
 }
 
 CDataModel::~CDataModel()
@@ -378,6 +346,15 @@ size_t CDataModel::GetElementHash(char* type, char* name, int* set)
 	return std::hash<char*>{}(str);
 }
 
+size_t CDataModel::GetElementHash(const char* type, const char* name, int set)
+{
+	char str[MAX_PATH_SOURCE];
+
+	sprintf_s(str, MAX_PATH_SOURCE, "%s_%s_%i", type, name, set);
+
+	return std::hash<char*>{}(str);
+}
+
 // list part may need to be removed as it should be a given, and we should just add attributes to it after
 int CDataModel::AddElement(DmElement* element, CDataModelAttributeList* list)
 {
@@ -395,7 +372,60 @@ int CDataModel::AddElement(DmElement* element, CDataModelAttributeList* list)
 
 	numElements++;
 
-	return element->elementIndex;
+	return newElement->elementIndex;
+}
+
+int CDataModel::AddElement(size_t* elementHash)
+{
+	if (elementList.count(*elementHash))
+		return elementList.find(*elementHash)->second->elementIndex;
+
+	DmElement* newElement = new DmElement;
+	CDataModelAttributeList* newList = new CDataModelAttributeList;
+
+	newElement->elementIndex = elementList.size();
+	newElement->elementHash = *elementHash;
+
+	elementList.emplace(newElement->elementHash, newElement);
+	attributeList.push_back(newList);
+
+	numElements++;
+
+	return newElement->elementIndex;
+}
+
+DmElement* CDataModel::AddElement(const char* type, const char* name, int set)
+{
+	size_t hash = GetElementHash(type, name, set);
+
+	if (elementList.count(hash))
+	{
+		//return elementList.find(element->elementHash)->second->elementIndex;
+		Error("Element 0x%llx already exists!");
+	}
+
+	DmElement* newElement = new DmElement;
+	CDataModelAttributeList* newList = new CDataModelAttributeList;
+
+	newElement->elementHash = hash;
+
+	newElement->elementTypeStr = type;
+	newElement->elementNameStr = name;
+	newElement->elementSet = set;
+
+	newElement->elementType = stringDict.AddToStringDict(type);
+	newElement->elementName = stringDict.AddToStringDict(name);
+
+	// set guid here
+
+	newElement->elementIndex = elementList.size();
+
+	elementList.emplace(newElement->elementHash, newElement);
+	attributeList.push_back(newList);
+
+	numElements++;
+
+	return newElement;
 }
 
 DmElement* CDataModel::GetElement(size_t* hash)
@@ -426,6 +456,36 @@ int CDataModel::AddAttributeList(CDataModelAttributeList* list)
 CDataModelAttributeList* CDataModel::GetAttributeList(int* index)
 {
 	return attributeList.at(*index);
+}
+
+void CDataModel::AddAttribute(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, void* value)
+{
+	DmAttribute* newAttribute = new DmAttribute;
+
+	newAttribute->attributeNameStr = name;
+	newAttribute->attributeName = stringDict.AddToStringDict(name);
+
+	newAttribute->attributeType = type;
+
+	newAttribute->attributeValue = value;
+
+	list->pAttributes()->emplace(name, newAttribute);
+	*list->pNumAttributes() += 1;
+}
+
+void CDataModel::AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*> values, int numValues)
+{
+	DmAttribute* newAttribute = new DmAttribute;
+
+	newAttribute->attributeNameStr = name;
+	newAttribute->attributeName = stringDict.AddToStringDict(name);
+
+	newAttribute->attributeType = type;
+
+	newAttribute->attributeValues = values;
+	newAttribute->numValues = numValues;
+
+	list->pAttributes()->emplace(name, newAttribute);
 }
 
 
@@ -470,8 +530,8 @@ std::vector<CDataModelAttributeList*>* CDataModel::pAttributeList()
 // write / read
 void CDataModel::WriteDataModel(char** pData)
 {
-	strcpy_s(*pData, dataModelHeader.length() + 1, dataModelHeader.c_str()); // redo this
-	*pData += dataModelHeader.length() + 1;
+	strcpy_s(*pData, MAX_PATH_SOURCE, dataModelHeader.c_str());
+	*pData += strnlen_s(dataModelHeader.c_str(), MAX_PATH_SOURCE) + 1;
 
 	stringDict.WriteStringDict(pData);
 
@@ -504,7 +564,6 @@ void CDataModel::WriteDataModel(char** pData)
 			*pData += sizeof(DmxAttribute_t);
 
 			attribute.second->WriteAttributeValue(pData);
-
 		}
 	}
 }

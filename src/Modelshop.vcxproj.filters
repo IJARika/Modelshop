@@ -13,11 +13,14 @@
     <ClCompile Include="math\mathlib.cpp">
       <Filter>Source Files\math</Filter>
     </ClCompile>
-    <ClCompile Include="dmx\dmx.cpp">
-      <Filter>Source Files\dmx</Filter>
-    </ClCompile>
     <ClCompile Include="studio\studio_extract.cpp">
       <Filter>Source Files\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="datamodel\datamodel.cpp">
+      <Filter>Source Files\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="datamodel\datamodel_element.cpp">
+      <Filter>Source Files\datamodel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -51,14 +54,23 @@
     <ClInclude Include="math\compressed_vector.h">
       <Filter>Header Files\math</Filter>
     </ClInclude>
-    <ClInclude Include="dmx\dmx.h">
-      <Filter>Header Files\dmx</Filter>
-    </ClInclude>
     <ClInclude Include="studio\studio_extract.h">
       <Filter>Header Files\studio</Filter>
     </ClInclude>
     <ClInclude Include="shareddefs.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector64.h">
+      <Filter>Header Files\math</Filter>
+    </ClInclude>
+    <ClInclude Include="datamodel\datamodel.h">
+      <Filter>Header Files\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="datamodel\datamodel_element.h">
+      <Filter>Header Files\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="datamodel\datamodel_test.h">
+      <Filter>Header Files\datamodel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -74,16 +86,16 @@
     <Filter Include="Header Files\studio">
       <UniqueIdentifier>{a209add7-8f45-4e30-9725-281c668db094}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\dmx">
-      <UniqueIdentifier>{8acb8795-d944-41c7-8c9c-118a7c2ea3b0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\studio">
       <UniqueIdentifier>{bfe98cf1-581a-4672-8332-d0c2d5a7e2f8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\math">
       <UniqueIdentifier>{3da7185c-3b58-4dba-b477-5e10f199f6b9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\dmx">
+    <Filter Include="Header Files\datamodel">
+      <UniqueIdentifier>{8acb8795-d944-41c7-8c9c-118a7c2ea3b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\datamodel">
       <UniqueIdentifier>{694a51df-2ea1-4b0d-adf1-f6fa267d8109}</UniqueIdentifier>
     </Filter>
   </ItemGroup>

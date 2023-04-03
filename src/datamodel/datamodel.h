@@ -22,6 +22,7 @@
 //=============================
 // DataModel String Dictionary
 //=============================
+
 struct stringentry_t
 {
 	// may need more vars here if it is needed.
@@ -48,6 +49,7 @@ private:
 //==========================
 // DataModel Attribute List
 //==========================
+
 enum DmAttributeType_t : char
 {
 	AT_UNKNOWN = 0,
@@ -96,11 +98,13 @@ struct DmeTime_t
 
 };
 
-struct DmxAttributeArray_t
-{
-	int numAttributeValues;
-	void* attributeValues;
-};
+//struct DmxAttributeArray_t
+//{
+//	int numAttributeValues;
+//	void* attributeValues;
+//
+//	void WriteAttributeValue(char** pData);
+//};
 
 #pragma pack(push, 1)
 struct DmxAttribute_t
@@ -112,12 +116,17 @@ struct DmxAttribute_t
 
 struct DmAttribute
 {
-	void* attributeValue;
+	const char* attributeNameStr;
 	int attributeName; // string dictionary index
+
+	int numValues; // number of values (only set if array type)
+	void* attributeValue;
+	std::vector<void*> attributeValues;	
+	
 	DmAttributeType_t attributeType; // DmAttributeType_t
 
-	const char* attributeNameStr;
-
+	template<class T> __forceinline void WriteAttributeValue(char** pData, void* attrVal, int attrOptSize = -1);
+	template<class T> void WriteAttributeArray(char** pData, int* numVals, std::vector<void*> attrVals, int attrOptSize = -1);
 	void WriteAttributeValue(char** pData);
 };
 
@@ -147,6 +156,7 @@ private:
 //===================
 // DataModel Element
 //===================
+
 struct DmxElement_t
 {
 	int elementType; // string dict index of type string
@@ -156,13 +166,15 @@ struct DmxElement_t
 
 struct DmElement
 {
-	int elementType; // string dict index of type string
-	int elementName; // string dict index of name string
-	GUID elementId; // unique id for this element
-
-	int elementIndex; // index in the ElementList array
 	const char* elementTypeStr;
 	const char* elementNameStr;
+
+	GUID elementId; // unique id for this element
+	int elementType; // string dict index of type string
+	int elementName; // string dict index of name string
+
+	int elementIndex = -1; // index in the ElementList array
+	
 	int elementSet; // if there are duplicate sets of elements, which is this one in?
 	size_t elementHash;
 };
@@ -171,6 +183,7 @@ struct DmElement
 //===========
 // DataModel
 //===========
+
 enum class DataModelType_t
 {
 	DM_MODEL,
@@ -181,13 +194,17 @@ enum class DataModelType_t
 class CDataModel
 {
 public:
+	CDataModel();
 	CDataModel(DataModelType_t datamodelType); // will set header on creation
 	~CDataModel();
 
 	// element
 	size_t GetElementHash(DmElement* element);
 	size_t GetElementHash(char* type, char* name, int* set);
+	size_t GetElementHash(const char* type, const char* name, int set);
 	int AddElement(DmElement* element, CDataModelAttributeList* list);
+	int AddElement(size_t* elementHash); // adds a new element without need for input
+	DmElement* AddElement(const char* type, const char* name, int set);
 	DmElement* GetElement(size_t* hash);
 	DmElement* GetElement(int* index);
 	int GetElementIndex(size_t* hash);
@@ -195,6 +212,8 @@ public:
 	// attributes
 	int AddAttributeList(CDataModelAttributeList* list);
 	CDataModelAttributeList* GetAttributeList(int* index);
+	void AddAttribute(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, void* value);
+	void AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*> values, int numValues);
 
 	// accessor funcs
 	DataModelType_t* pDataModelType();
@@ -209,7 +228,7 @@ public:
 	// writing/reading
 	void WriteDataModel(char** pData);
 
-private: // these need better packing (?)
+protected: // these need better packing (?)
 	// interal
 	DataModelType_t dataModelType;
 	DmElement* rootElement;

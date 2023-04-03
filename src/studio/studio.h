@@ -3,6 +3,7 @@
 
 #include "../math/vector.h"
 #include "../math/compressed_vector.h"
+#include "../math/vector64.h"
 #include "../math/vector4d.h"
 #include "../math/vertexcolor.h"
 
@@ -420,7 +421,7 @@ namespace vg
 			__int64 unknownOffset;   // offset to buffer
 			__int64 numUnknown;    // count (size: 0x30)
 
-			// vtx::ModelLODHeader_t
+			// ModelLODHeader_t
 			__int64 lodOffset;       // offset to LOD buffer
 			__int64 numLODs;        // number of LODs (size: 0x8)
 
@@ -435,20 +436,200 @@ namespace vg
 			__int64 unused[8];
 		};
 
-		#define VERTEX_POSITION         0x1
-		#define VERTEX_POSITION_PACKED  0x2
-		#define VERTEX_COLOR			0x10
-		#define VERTEX_WEIGHTS_PACKED   0x5000 // this is definitely two flags
-		#define VERTEX_UV2				0x200000000
+		struct ModelLODHeader_t
+		{
+			//Mesh array
+			unsigned short numMeshes;
+			unsigned short meshOffset;
+
+			float switchPoint;
+		};
+
+		#define VERTEX_HAS_POSITION         0x1
+		#define VERTEX_HAS_POSITION_PACKED  0x2
+		#define VERTEX_HAS_COLOR			0x10
+		#define VERTEX_HAS_WEIGHTS			0x1000
+		#define VERTEX_HAS_WEIGHTS_TYPE1	0x2000
+		#define VERTEX_HAS_WEIGHTS_TYPE2	0x4000 // presumably this is 'packed' weights
+		#define VERTEX_WEIGHTS_PACKED		0x5000 // this is definitely two flags
+		#define VERTEX_HAS_UV2				0x200000000
+
+		/*string UnpackNormal(DWORD _Value)
+		{
+			local float x, y, z;
+
+			local float v87 = ((2 * _Value) >> 30);
+			local int v88 = 255;
+			if (((8 * _Value) >> 31) != 0.0)
+				v88 = -255;
+			local float v89 = (float)v88;
+			local float v90 = ((_Value << 13) >> 23) + -256.0;
+			local float v91 = ((16 * _Value) >> 23) + -256.0;
+			local float v92 = ((v91 * v91) + (255.0 * 255.0)) + (v90 * v90);
+
+			local float v93 = Sqrt(v92);
+			local int v97 = 0;
+
+			local float v1, v2, v3;
+
+			v1 = v90 * (1.0 / v93);
+			v2 = v89 * (1.0 / v93);
+			v3 = v91 * (1.0 / v93);
+			if (v87 == 1.0)
+				v97 = -1;
+			else
+				v97 = 0;
+			if (v87 == 2.0)
+			{
+				x = v3;
+				y = v1;
+				z = v2;
+			}
+			else
+			{
+				x = v2;
+				y = v3;
+				z = v1;
+			}
+			if (!v97)
+			{
+				v1 = x;
+				v2 = y;
+				v3 = z;
+			}
+			return Str("< %f, %f, %f >", v1, v2, v3);
+		};
+
+		struct PackedNormalTangent
+		{
+			unsigned int tangent : 10;
+			unsigned int norm1 : 9;
+			unsigned int norm2 : 9;
+			unsigned int norm_sign : 1;
+			unsigned int norm_dropped : 2;
+			unsigned int binorm_sign : 1; // for tangent
+		};
+
+		void UnpackNormal2(PackedNormalTangent& TBN)
+		{
+			// normal 
+			local int normalSign = TBN.norm_sign ? -255 : 255;
+
+			local float norm1 = TBN.norm1 + -255.5; // - 256
+			local float norm2 = TBN.norm2 + -255.5; // - 256
+
+			// remove 1.0 / if issues occur
+
+			local float compressFactor = 1.0 / Sqrt(((norm2 * norm2) + (255.0 * 255.0)) + (norm1 * norm1));
+
+			local float valueNorm1, valueNorm2, valueDropped;
+
+			valueNorm1 = norm1 * compressFactor; // (1.0 / compressFactor) if issues occur
+			valueNorm2 = norm2 * compressFactor;
+			valueDropped = normalSign * compressFactor;
+
+			local Vector3 normal;
+
+			// check which axis was dropped
+			switch (TBN.norm_dropped)
+			{
+			case 0:
+				normal.x = valueDropped;
+				normal.y = valueNorm2;
+				normal.z = valueNorm1;
+				break;
+			case 1:
+				normal.x = valueNorm1;
+				normal.y = valueDropped;
+				normal.z = valueNorm2;
+				break;
+			case 2:
+				normal.x = valueNorm2;
+				normal.y = valueNorm1;
+				normal.z = valueDropped;
+				break;
+			default:
+				break;
+			};
+
+			float r2y = 1 + normal.z;
+			r2y = 1.f / r2y;
+			float r2z = -r2y * normal.x;
+			float r2w = normal.y * normal.y;
+			float r3x = r2z * normal.y;
+			float r4x = -r2y * r2w + 1;
+			float r4y = -normal.x;
+			float r4z = -normal.y;
+			float r3z = r2z * normal.x + 1;
+			float r3y;
+			float r3w = r4y;
+			if (normal.z < -0.999899983)
+			{
+				r2y = 0;
+				r2z = -1;
+				r2w = 0;
+			}
+			else
+			{
+				r2y = r3z;
+				r2z = r3x;
+				r2w = r3w;
+			}
+			float r4w = r3x;
+			if (normal.z < -0.999899983)
+			{
+				r3x = -1;
+				r3y = 0;
+				r3z = 0;
+			}
+			else
+			{
+				r3x = r4w;
+				r3y = r4x;
+				r3z = r4z;
+			}
+
+			float x = TBN.tangent * 0.00614192151;
+			float r2x = Sin(x);
+			r4x = Cos(x);
+			r3x *= r2x;
+			r3y *= r2x;
+			r3z *= r2x;
+			r2x = r2y * r4x + r3x;
+			r2y = r2z * r4x + r3y;
+			r2z = r2w * r4x + r3z;
+
+			// normalizing
+			float r1w = r2x * r2x + r2y * r2y + r2z * r2z;
+			r1w = 1.f / Sqrt(r1w);
+			r2x *= r1w;
+			r2y *= r1w;
+			r2z *= r1w;
+
+			//float x = TBN.tangent * compressFactor;
+			//x = 0.00614192151 * x;
+			//float r2x = Sin(x);
+
+			// where other values??
+			local Vector4 tangent;
+
+			tangent.x = r2x;
+			tangent.y = r2y;
+			tangent.z = r2z;
+
+			tangent.w = TBN.binorm_sign ? -1 : 1;
+
+			return Str("< %f, %f, %f > < %f, %f, %f, %f >", normal.x, normal.y, normal.z, tangent.x, tangent.y, tangent.z, tangent.w);
+		};*/
 
 		struct MeshHeader_t
 		{
 			__int64 flags;	// mesh flags
 
 			// uses dynamic sized struct, similar to RLE animations
-			int vertOffset;			    // start offset for this mesh's vertices
-			int vertCacheSize;		    // size of the vertex structure
-			int numVerts;			    // number of vertices
+			unsigned int vertOffset;			    // start offset for this mesh's vertices
+			unsigned int vertCacheSize;		    // size of the vertex structure
+			unsigned int numVerts;			    // number of vertices
 
 			int unk1;
 
@@ -478,9 +659,22 @@ namespace vg
 			int topologyOffset;*/
 		};
 
+		struct mstudiopackedboneweight_t
+		{
+			short weight[2]; // shouldn't be > 32767
+			char bone[3];
+			char numbones; // number of bones - 1, number of extra 
+		};
+
 		struct Vertex_t
 		{
-			// do functions here
+			Vector m_vecPosition;
+			Vector64 m_vecPositionPacked;
+			mstudiopackedboneweight_t m_BoneWeightsPacked;
+			uint32_t m_NormalTangentPacked;
+			VertexColor_t m_color;
+			Vector2D m_vecTexCoord;
+			Vector2D m_vecTexCoord2;
 		};
 
 		struct unkdata
@@ -2588,6 +2782,7 @@ namespace r2
 		// doesn't actually need to be written pretty sure, only four chars when not present.
 		// this is not completely true as some models simply have nothing, such as animation models.
 		int sourceFilenameOffset;
+		inline char* const pszSourceFiles() const { return ((char*)this + sourceFilenameOffset); }
 
 		int numsrcbonetransform;
 		int srcbonetransformindex;
@@ -3277,6 +3472,144 @@ namespace r5
 	// technically not v54 anymore
 	namespace v16
 	{
+		struct mstudiobone_t
+		{
+			int contents; // See BSPFlags.h for the contents flags
+
+			unsigned char unk;
+
+			unsigned char surfacepropLookup; // written on compile in v54
+
+			unsigned short surfacepropidx; // index into string tablefor property name
+
+			unsigned short physicsbone; // index into physically simulated bone
+
+			unsigned short sznameindex;
+		};
+
+		// gpu bone?
+		struct mstudiobonedata_t
+		{
+			matrix3x4_t poseToBone;
+			Quaternion qAlignment;
+
+			// default values
+			Vector pos;
+			Quaternion quat;
+			RadianEuler rot;
+			Vector scale; // bone scale(?)
+
+			unsigned short parent; // parent bone;
+
+			unsigned short unk1;
+
+			unsigned int flags;
+
+			unsigned char unkid;
+
+			unsigned char proctype;
+			unsigned short procindex; // procedural rule
+		};
+
+		struct mstudiolinearbone_t
+		{
+			// they cut pos and rot scale, understandable since posscale was never used it tf|2 and they do anims different in apex
+			unsigned short numbones;
+
+			unsigned short flagsindex;
+
+			unsigned short parentindex;
+
+			unsigned short posindex;
+
+			unsigned short quatindex;
+
+			unsigned short rotindex;
+
+			unsigned short posetoboneindex;
+		};
+
+		struct mstudioattachment_t
+		{
+			unsigned short sznameindex;
+			unsigned short localbone; // parent bone
+			int flags;
+
+			matrix3x4_t			localmatrix; // attachment point
+		};
+
+		struct mstudioiklink_t
+		{
+			int bone;
+			Vector	kneeDir; // no kneeDir in apex I think
+		};
+
+		struct mstudioikchain_t
+		{
+			unsigned short sznameindex;
+
+			unsigned short linktype;
+			unsigned short numlinks;
+			unsigned short linkindex;
+
+			float unk; // no clue what this does tbh, tweaking it does nothing
+					   // default value: 0.707f
+		};
+
+		struct mstudiocompressedikerror_t
+		{
+			unsigned short sectionframes; // frames per section, may not match animdesc
+			float scale[6]; // these values are the same as what posscale (if it was used) and rotscale are.
+		};
+
+		struct mstudioikrule_t
+		{
+			short index;
+			short bone;
+			char type;
+			char slot; // chain/slot merged?
+
+			// whar the heck
+			mstudiocompressedikerror_t compressedikerror;
+			int compressedikerrorindex;
+
+			short iStart;
+			short ikerrorindex;
+
+			float start; // beginning of influence
+			float peak; // start of full influence
+			float tail; // end of full influence
+			float end; // end of all influence
+
+			float contact; // frame footstep makes ground concact
+			float drop; // how far down the foot should drop when reaching for IK
+			float top; // top of the foot box
+
+			//char placeholder[44];
+
+			// if both of these ints become shorts then it would fit
+
+			// ORDER BELOW UNKNOWN
+
+			// cut now?
+			//unsigned short szattachmentindex; // name of world attachment
+
+			float endHeight; // new in v52, bt uses this I think
+
+			// this fits but I don't really know
+			//short slot; // iktarget slot. Usually same as chain.
+			float height;
+			float radius;
+			float floor;
+			Vector pos;
+			Quaternion q;
+		};
+
+		struct mstudioanimsections_t
+		{
+			int animindex;  // negative number if external
+		};
+
 		struct mstudioanimdesc_t
 		{
 			float fps; // frames per second	
@@ -3301,27 +3634,47 @@ namespace r5
 			unsigned short sectionframes; // number of frames used in each fast lookup section, zero if not used
 		};
 
+		struct mstudioevent_t
+		{
+			float cycle;
+			int	event;
+			int type; // this will be 0 if old style I'd imagine
+
+			int unk;
+
+			unsigned short szoptionsindex;
+
+			unsigned short szeventindex;
+		};
+
+		struct mstudioactivitymodifier_t
+		{
+			unsigned short sznameindex;
+
+			bool negate; // 0 or 1 observed.
+		};
+
 		struct mstudioseqdesc_t
 		{
-			short szlabelindex;
+			unsigned short szlabelindex;
 
-			short szactivitynameindex;
+			unsigned short szactivitynameindex;
 
 			int flags; // looping/non-looping flags
 
-			short activity; // initialized at loadtime to game DLL values
-			short actweight;
+			unsigned short activity; // initialized at loadtime to game DLL values
+			unsigned short actweight;
 
-			short numevents;
-			short eventindex;
+			unsigned short numevents;
+			unsigned short eventindex;
 
 			Vector bbmin; // per sequence bounding box
 			Vector bbmax;
 
-			short numblends;
+			unsigned short numblends;
 
 			// Index into array of shorts which is groupsize[0] x groupsize[1] in length
-			short animindexindex;
+			unsigned short animindexindex;
 
 			//short movementindex; // [blend] float array for blended movement
 			short paramindex[2]; // X, Y, Z, XR, YR, ZR
@@ -3348,34 +3701,44 @@ namespace r5
 			short nextseq; // auto advancing sequences
 			short pose; // index of delta animation between end and nextseq*/
 
-			short numikrules;
+			unsigned short numikrules;
 
-			short numautolayers;
+			unsigned short numautolayers;
 			unsigned short autolayerindex;
 
 			unsigned short weightlistindex;
 
-			char groupsize[2];
+			unsigned char groupsize[2];
 
 			unsigned short posekeyindex;
 
-			short numiklocks;
-			short iklockindex;
+			unsigned short numiklocks;
+			unsigned short iklockindex;
 
 			// Key values
 			unsigned short keyvalueindex;
-			short keyvaluesize;
+			unsigned short keyvaluesize;
 
 			//short cycleposeindex; // index of pose parameter to use as cycle index
 
-			short activitymodifierindex;
-			short numactivitymodifiers;
+			unsigned short activitymodifierindex;
+			unsigned short numactivitymodifiers;
 
 			int ikResetMask; // new in v52
 			int unk1;
 
 			unsigned short unkindex;
-			short unkcount;
+			unsigned short unkcount;
+		};
+
+		struct mstudioposeparamdesc_t
+		{
+			unsigned short sznameindex;
+
+			short flags; // ????
+			float start; // starting value
+			float end; // ending value
+			float loop;	// looping range, 0 for no looping, 360 for rotations, etc.
 		};
 
 		struct mstudiobbox_t
@@ -3391,6 +3754,54 @@ namespace r5
 			unsigned short keyvalueindex; // used for keyvalues, most for titans.
 		};
 
+		struct mstudiohitboxset_t
+		{
+			unsigned short sznameindex;
+
+			unsigned short numhitboxes;
+			unsigned short hitboxindex;
+		};
+
+		struct mstudiotexture_t
+		{
+			unsigned __int64 guid; // hash of material path
+		};
+
+		struct mstudiomesh_t
+		{
+			short material;
+
+			// a unique ordinal for this mesh
+			short meshid;
+
+			char unk[4];
+
+			Vector center;
+		};
+
+		struct mstudiomodel_t
+		{
+
+			unsigned short unkindex2; // index to a string
+
+			short nummeshes;
+
+			// first is the same as nummeshes?
+			short unk_v14;
+			short unk1_v14;
+
+			short meshindex;
+		};
+
+		struct mstudiobodyparts_t
+		{
+			unsigned short sznameindex;
+			unsigned short modelindex;
+			int base;
+			int nummodels;
+			int meshindex; // might be short
+		};
+
 		struct studiohdr_t
 		{
 			int flags;
@@ -3398,7 +3809,7 @@ namespace r5
 			unsigned short sznameindex; // No longer stored in string block, uses string in header.
 			char name[32]; // The internal name of the model, padding with null chars.
 						   // Typically "my_model.mdl" will have an internal name of "my_model"
-			char unk_v16;
+			char unk_v16; // name ?
 
 			char surfacepropLookup; // saved in the file
 
@@ -3421,7 +3832,7 @@ namespace r5
 
 			unsigned short numbones; // bones
 			unsigned short boneindex;
-			unsigned short bonedataindex;
+			unsigned short bonedataindex; // gpu bone?
 
 			unsigned short numlocalseq; // sequences
 			unsigned short localseqindex;
