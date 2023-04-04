@@ -14,10 +14,10 @@ CDmeModel::CDmeModel(CDataModel* datamodel)
 
 void CDmeModel::AddAsModel()
 {
-	pBaseDataModel->AddAttribute(pAttributes, "model", DmAttributeType_t::AT_ELEMENT, &pElement->elementIndex);
+	pBaseDataModel->AddAttribute(pBaseDataModel->pRootAttributeList(), "model", DmAttributeType_t::AT_ELEMENT, &pElement->elementIndex);
 }
 
 void CDmeModel::AddAsSkeleton()
 {
-	pBaseDataModel->AddAttribute(pAttributes, "skeleton", DmAttributeType_t::AT_ELEMENT, &pElement->elementIndex);
+	pBaseDataModel->AddAttribute(pBaseDataModel->pRootAttributeList(), "skeleton", DmAttributeType_t::AT_ELEMENT, &pElement->elementIndex);
 }

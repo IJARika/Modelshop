@@ -16,9 +16,11 @@ int main(int argc, char** argv)
 	if (!std::filesystem::exists(filePath))
 		Error("file not found");
 
+	int fileSize = std::filesystem::file_size(filePath);
+
 	std::ifstream mdlIn(filePath, std::ios::in | std::ios::binary);
-	char* mdlBuf = new char[std::filesystem::file_size(filePath)];
-	mdlIn.read(mdlBuf, std::filesystem::file_size(filePath));
+	char* mdlBuf = new char[fileSize];
+	mdlIn.read(mdlBuf, fileSize);
 
 	// set this up here so it's not done per loop, will have to be moved wherever this ends up
 	std::string dmxOutPath = std::filesystem::path(filePath).parent_path().append("dmx").u8string();

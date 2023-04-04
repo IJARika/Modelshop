@@ -3,6 +3,7 @@
 //#include <iostream>
 //#include <fstream>
 //#include <filesystem>
+#include <algorithm>
 
 #include "../shareddefs.h"
 #include "../utils.h"
@@ -195,8 +196,6 @@ void DmAttribute::WriteAttributeValue(char** pData)
 		Error("Attribute 'AT_VMATRIX_ARRAY' not fully implemented\n");
 		break;
 	case AT_TYPE_COUNT:
-		Error("Attribute 'AT_TYPE_COUNT' not fully implemented\n");
-		break;
 	case AT_TYPE_INVALID:
 	default:
 		Error("Attribute used invalid type!\n");
@@ -296,22 +295,17 @@ CDataModel::CDataModel(DataModelType_t type)
 	rootElement->elementSet = 0;
 	rootElement->elementHash = GetElementHash(rootElement);
 
-	elementList.emplace(rootElement->elementHash, rootElement);
+	elementList.push_back(rootElement);
 	AddAttributeList(rootAttributeList);
 
 	numElements = 1;
-}
-
-CDataModel::CDataModel()
-{
-
 }
 
 CDataModel::~CDataModel()
 {
 	for (auto& element : elementList)
 	{
-		delete element.second;
+		delete element;
 	}
 
 	for (auto& list : attributeList)
@@ -337,11 +331,11 @@ size_t CDataModel::GetElementHash(DmElement* element)
 	return std::hash<char*>{}(str);
 }
 
-size_t CDataModel::GetElementHash(char* type, char* name, int* set)
+size_t CDataModel::GetElementHash(char* type, char* name, int set)
 {
 	char str[MAX_PATH_SOURCE];
 
-	sprintf_s(str, MAX_PATH_SOURCE, "%s_%s_%i", type, name, *set);
+	sprintf_s(str, MAX_PATH_SOURCE, "%s_%s_%i", type, name, set);
 
 	return std::hash<char*>{}(str);
 }
@@ -358,8 +352,8 @@ size_t CDataModel::GetElementHash(const char* type, const char* name, int set)
 // list part may need to be removed as it should be a given, and we should just add attributes to it after
 int CDataModel::AddElement(DmElement* element, CDataModelAttributeList* list)
 {
-	if (elementList.count(element->elementHash))
-		return elementList.find(element->elementHash)->second->elementIndex;
+	/*if (elementList.count(element->elementHash))
+		return elementList.find(element->elementHash)->second->elementIndex;*/
 
 	DmElement* newElement = new DmElement;
 	CDataModelAttributeList* newList = new CDataModelAttributeList;
@@ -367,7 +361,8 @@ int CDataModel::AddElement(DmElement* element, CDataModelAttributeList* list)
 	*newElement = *element;
 
 	newElement->elementIndex = elementList.size();
-	elementList.emplace(newElement->elementHash, newElement);
+	newList->attributeListIndex = newElement->elementIndex;
+	elementList.push_back(newElement);
 	attributeList.push_back(newList);
 
 	numElements++;
@@ -377,16 +372,17 @@ int CDataModel::AddElement(DmElement* element, CDataModelAttributeList* list)
 
 int CDataModel::AddElement(size_t* elementHash)
 {
-	if (elementList.count(*elementHash))
-		return elementList.find(*elementHash)->second->elementIndex;
+	/*if (elementList.count(*elementHash))
+		return elementList.find(*elementHash)->second->elementIndex;*/
 
 	DmElement* newElement = new DmElement;
 	CDataModelAttributeList* newList = new CDataModelAttributeList;
 
 	newElement->elementIndex = elementList.size();
+	newList->attributeListIndex = newElement->elementIndex;
 	newElement->elementHash = *elementHash;
 
-	elementList.emplace(newElement->elementHash, newElement);
+	elementList.push_back(newElement);
 	attributeList.push_back(newList);
 
 	numElements++;
@@ -398,10 +394,12 @@ DmElement* CDataModel::AddElement(const char* type, const char* name, int set)
 {
 	size_t hash = GetElementHash(type, name, set);
 
-	if (elementList.count(hash))
+	std::vector<DmElement*>::iterator it = std::find_if(elementList.begin(), elementList.end(), [hash](DmElement* element) -> bool { return element->elementHash == hash; });
+
+	if (it != elementList.end())
 	{
-		//return elementList.find(element->elementHash)->second->elementIndex;
-		Error("Element 0x%llx already exists!");
+		printf("Element '0x%llx' already exists! Returning ptr to existing element.\n", hash);
+		return *it._Ptr;
 	}
 
 	DmElement* newElement = new DmElement;
@@ -416,11 +414,12 @@ DmElement* CDataModel::AddElement(const char* type, const char* name, int set)
 	newElement->elementType = stringDict.AddToStringDict(type);
 	newElement->elementName = stringDict.AddToStringDict(name);
 
-	// set guid here
+	//newElement->elementId = something;
 
 	newElement->elementIndex = elementList.size();
+	newList->attributeListIndex = newElement->elementIndex;
 
-	elementList.emplace(newElement->elementHash, newElement);
+	elementList.push_back(newElement);
 	attributeList.push_back(newList);
 
 	numElements++;
@@ -428,20 +427,34 @@ DmElement* CDataModel::AddElement(const char* type, const char* name, int set)
 	return newElement;
 }
 
-DmElement* CDataModel::GetElement(size_t* hash)
+DmElement* CDataModel::GetElement(size_t hash)
 {
-	return elementList.find(*hash)->second;
+	std::vector<DmElement*>::iterator it = std::find_if(elementList.begin(), elementList.end(), [hash](DmElement* element) -> bool { return element->elementHash == hash; });
+
+	if (it != elementList.end())
+	{
+		return *it._Ptr;
+	}
+
+	Error("Could not find element '0x%llx', exiting...\n", hash);
 }
 
 // this will not work as expected
-DmElement* CDataModel::GetElement(int* index)
+inline DmElement* CDataModel::GetElement(int index)
 {
-	return elementList.at(*index);
+	return elementList.at(index);
 }
 
-int CDataModel::GetElementIndex(size_t* hash)
+inline int CDataModel::GetElementIndex(size_t hash)
 {
-	return elementList.find(*hash)->second->elementIndex;
+	std::vector<DmElement*>::iterator it = std::find_if(elementList.begin(), elementList.end(), [hash](DmElement* element) -> bool { return element->elementHash == hash; });
+
+	if (it != elementList.end())
+	{
+		return (*it._Ptr)->elementIndex;
+	}
+
+	Error("Could not find element '0x%llx', exiting...\n", hash);
 }
 
 
@@ -488,45 +501,6 @@ void CDataModel::AddAttributeArray(CDataModelAttributeList* list, const char* na
 	list->pAttributes()->emplace(name, newAttribute);
 }
 
-
-// accessor funcs
-DataModelType_t* CDataModel::pDataModelType()
-{
-	return &dataModelType;
-}
-
-DmElement* CDataModel::pRootElement()
-{
-	return rootElement;
-}
-
-CDataModelAttributeList* CDataModel::pRootAttributeList()
-{
-	return rootAttributeList;
-}
-
-
-std::string* CDataModel::pHeader()
-{
-	return &dataModelHeader;
-}
-
-CDataModelStringDict* CDataModel::pStringDict()
-{
-	return &stringDict;
-}
-
-std::map<size_t, DmElement*>* CDataModel::pElementList()
-{
-	return &elementList;
-}
-
-std::vector<CDataModelAttributeList*>* CDataModel::pAttributeList()
-{
-	return &attributeList;
-}
-
-
 // write / read
 void CDataModel::WriteDataModel(char** pData)
 {
@@ -538,19 +512,35 @@ void CDataModel::WriteDataModel(char** pData)
 	memcpy_s(*pData, sizeof(int), &numElements, sizeof(int));
 	*pData += sizeof(int);
 
+	int idx = 0;
+
 	for (auto& element : elementList)
 	{
+		if (idx != element->elementIndex)
+		{
+			Error("Element index did not match position in 'elementList'\n");
+		}
+
 		DmxElement_t* newElement = reinterpret_cast<DmxElement_t*>(*pData);
 
-		newElement->elementType = element.second->elementType;
-		newElement->elementName = element.second->elementName;
-		newElement->elementId = element.second->elementId;
+		newElement->elementType = element->elementType;
+		newElement->elementName = element->elementName;
+		newElement->elementId = element->elementId;
 
 		*pData += sizeof(DmxElement_t);
+
+		idx++;
 	}
+
+	idx = 0;
 
 	for (auto& list : attributeList)
 	{
+		if (idx != list->attributeListIndex)
+		{
+			Error("Attribute list index did not match position in 'attributeList'\n");
+		}
+
 		*reinterpret_cast<int*>(*pData) = list->GetAttributeCount();
 		*pData += sizeof(int);
 
@@ -565,5 +555,8 @@ void CDataModel::WriteDataModel(char** pData)
 
 			attribute.second->WriteAttributeValue(pData);
 		}
+
+		idx++;
 	}
+
 }

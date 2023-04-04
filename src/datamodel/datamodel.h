@@ -143,9 +143,12 @@ public:
 	// accessor funcs
 	int* pNumAttributes();
 	std::map<const char*, DmAttribute*>* pAttributes();
+	//inline int* pIndex() { return &attributeListIndex; }
 
 	// reading/writing
 	void WriteAttributeList(char** pData);
+
+	int attributeListIndex;
 
 private:
 	int numAttributes;
@@ -194,20 +197,22 @@ enum class DataModelType_t
 class CDataModel
 {
 public:
-	CDataModel();
+	CDataModel() = default;
 	CDataModel(DataModelType_t datamodelType); // will set header on creation
 	~CDataModel();
 
 	// element
 	size_t GetElementHash(DmElement* element);
-	size_t GetElementHash(char* type, char* name, int* set);
+	size_t GetElementHash(char* type, char* name, int set);
 	size_t GetElementHash(const char* type, const char* name, int set);
+
 	int AddElement(DmElement* element, CDataModelAttributeList* list);
 	int AddElement(size_t* elementHash); // adds a new element without need for input
 	DmElement* AddElement(const char* type, const char* name, int set);
-	DmElement* GetElement(size_t* hash);
-	DmElement* GetElement(int* index);
-	int GetElementIndex(size_t* hash);
+
+	DmElement* GetElement(size_t hash);
+	DmElement* GetElement(int index);
+	int GetElementIndex(size_t hash);
 
 	// attributes
 	int AddAttributeList(CDataModelAttributeList* list);
@@ -216,14 +221,15 @@ public:
 	void AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*> values, int numValues);
 
 	// accessor funcs
-	DataModelType_t* pDataModelType();
-	DmElement* pRootElement();
-	CDataModelAttributeList* pRootAttributeList();
+	// accessor funcs
+	inline DataModelType_t* pDataModelType() { return &dataModelType; }
+	inline DmElement* pRootElement() { return rootElement; }
+	inline CDataModelAttributeList* pRootAttributeList() { return rootAttributeList; }
 
-	std::string* pHeader();
-	CDataModelStringDict* pStringDict();
-	std::map<size_t, DmElement*>* pElementList();
-	std::vector<CDataModelAttributeList*>* pAttributeList();
+	inline std::string* pHeader() { return &dataModelHeader; }
+	inline CDataModelStringDict* pStringDict() { return &stringDict; }
+	inline std::vector<DmElement*>* pElementList() { return &elementList; }
+	inline std::vector<CDataModelAttributeList*>* pAttributeList() { return &attributeList; }
 
 	// writing/reading
 	void WriteDataModel(char** pData);
@@ -239,6 +245,6 @@ protected: // these need better packing (?)
 	CDataModelStringDict stringDict;
 
 	int numElements;
-	std::map<size_t, DmElement*> elementList;
+	std::vector<DmElement*> elementList;
 	std::vector<CDataModelAttributeList*> attributeList; // should match the total number of elements
 };

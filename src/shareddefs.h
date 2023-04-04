@@ -12,6 +12,7 @@
 // ---------------------------
 //  Hit Group standards
 // ---------------------------
+#define HITGROUP_INVALID	-1
 #define	HITGROUP_GENERIC	0
 #define	HITGROUP_HEAD		1
 #define	HITGROUP_CHEST		2
@@ -20,9 +21,15 @@
 #define HITGROUP_RIGHTARM	5
 #define HITGROUP_LEFTLEG	6
 #define HITGROUP_RIGHTLEG	7
-#define HITGROUP_NECK		8			// unsure where this even comes from
-#define HITGROUP_GEAR		10			// alerts NPC, but doesn't do damage or bleed (1/100th damage)
+#define HITGROUP_GEAR		8			// alerts NPC, but doesn't do damage or bleed (1/100th damage)
+#define HITGROUP_COUNT		9
 
+// these are different in respawn games, but it's good to know them for future reference.
+#define HITGROUP_NECK_LEGACY	8			// unsure where this even comes from
+#define HITGROUP_GEAR_LEGACY	10			// alerts NPC, but doesn't do damage or bleed (1/100th damage)
+
+
+// these should be moved to bspflags.h in the future
 
 // ---------------------------
 //  BSPFLAGS
