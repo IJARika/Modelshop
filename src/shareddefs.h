@@ -1,3 +1,6 @@
+#ifndef SHAREDDEFS_H
+#define SHAREDDEFS_H
+
 #pragma once
 
 // Modelshop version
@@ -8,6 +11,7 @@
 
 #define MAX_PATH_SOURCE		512 // respawn may have changed this
 								// adjust as needed
+
 
 // ---------------------------
 //  Hit Group standards
@@ -103,3 +107,5 @@ namespace r5
 	#define CONTENTS_BLOCK_PING				0x20000000
 	#define CONTENTS_HITBOX					0x40000000
 }
+
+#endif

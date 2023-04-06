@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include "../utils.h"
+//#include "../shareddefs.h"
 #include "../datamodel/datamodel.h"
 #include "../datamodel/datamodel_element.h"
 #include "../studio/studio.h"
@@ -29,39 +30,40 @@ void DMXRenameLODs(std::string& fileName, int lodIdx)
 }
 
 // bad name for what this does
-void DMXBuildSkeletonR2(CDataModel* dmx, r2::studiohdr_t* pHdr)
-{
-	DmAttribute newAttribute{};
-	int lefunnitrol = 0;
+//void DMXBuildSkeletonR2(CDataModel* dmx, r2::studiohdr_t* pHdr)
+//{
+//	DmAttribute newAttribute{};
+//	int lefunnitrol = 0;
+//
+//	newAttribute.attributeName = dmx->pStringDict()->AddToStringDict("test");
+//	newAttribute.attributeType = DmAttributeType_t::AT_STRING_ARRAY;
+//	//newAttribute.attributeValue = &lefunnitrol;
+//	newAttribute.attributeNameStr = "test";
+//
+//	std::vector<void*> alittlebitoftrolling;
+//
+//	/*alittlebitoftrolling.push_back(&pHdr->flags);
+//	alittlebitoftrolling.push_back(&pHdr->checksum);
+//	alittlebitoftrolling.push_back(&pHdr->version);*/
+//
+//	alittlebitoftrolling.push_back(pHdr->pszName());
+//	alittlebitoftrolling.push_back(pHdr->pszSourceFiles());
+//
+//	newAttribute.attributeValues = alittlebitoftrolling;
+//	newAttribute.numValues = 2;
+//
+//	dmx->pRootAttributeList()->AddAttribute(&newAttribute);
+//
+//	/*UUID rootUUID;
+//	CDataModelAttributeList rootList;
+//
+//	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("CDmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
+//
+//	dmx->pElementList()->pAttributeList(0)->AddAttribute(dmx->pStringDict()->AddToStringDict("PISS"), 6, nullptr);*/
+//}
 
-	newAttribute.attributeName = dmx->pStringDict()->AddToStringDict("test");
-	newAttribute.attributeType = DmAttributeType_t::AT_STRING_ARRAY;
-	//newAttribute.attributeValue = &lefunnitrol;
-	newAttribute.attributeNameStr = "test";
-
-	std::vector<void*> alittlebitoftrolling;
-
-	/*alittlebitoftrolling.push_back(&pHdr->flags);
-	alittlebitoftrolling.push_back(&pHdr->checksum);
-	alittlebitoftrolling.push_back(&pHdr->version);*/
-
-	alittlebitoftrolling.push_back(pHdr->pszName());
-	alittlebitoftrolling.push_back(pHdr->pszSourceFiles());
-
-	newAttribute.attributeValues = alittlebitoftrolling;
-	newAttribute.numValues = 2;
-
-	dmx->pRootAttributeList()->AddAttribute(&newAttribute);
-
-	/*UUID rootUUID;
-	CDataModelAttributeList rootList;
-
-	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("CDmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
-
-	dmx->pElementList()->pAttributeList(0)->AddAttribute(dmx->pStringDict()->AddToStringDict("PISS"), 6, nullptr);*/
-}
-
-void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeader_t* pVVC, int lod, std::vector<const vvd::mstudiovertex_t*>& vvdVerts, std::vector<const VertexColor_t*>& vvcColors, std::vector<const Vector2D*>& vvcUV2s)
+// add vvw
+void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeader_t* pVVC, const int lod, std::vector<const vvd::mstudiovertex_t*>& vvdVerts, std::vector<const VertexColor_t*>& vvcColors, std::vector<const Vector2D*>& vvcUV2s)
 {
 	// rebuild vertex vector per lod just incase it has fixups
 	if (pVVD->numFixups)
@@ -118,10 +120,10 @@ void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeade
 void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 {
 	// setup required bufferes
-	r2::studiohdr_t* pHdr = reinterpret_cast<r2::studiohdr_t*>(pMdlBuf);
-	vtx::FileHeader_t* pVtx = pHdr->pVTX();
-	vvd::vertexFileHeader_t* pVVD = pHdr->pVVD();
-	vvc::vertexColorFileHeader_t* pVVC = pHdr->pVVC();
+	r2::studiohdr_t* const pHdr = reinterpret_cast<r2::studiohdr_t*>(pMdlBuf);
+	vtx::FileHeader_t* const pVtx = pHdr->pVTX();
+	vvd::vertexFileHeader_t* const pVVD = pHdr->pVVD();
+	vvc::vertexColorFileHeader_t* const pVVC = pHdr->pVVC();
 
 	for (int lodIdx = 0; lodIdx < pVtx->numLODs; lodIdx++)
 	{
@@ -154,6 +156,11 @@ void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 
 				dmxModel->AddAsSkeleton();
 				dmxModel->AddAsModel();
+
+				// messing around
+				dmxModel->AddAttrTransform();
+				dmxModel->AddAttrVisible();
+				dmxModel->AddAttrUpAxis();
 
 				//DMXBuildSkeletonR2(&dmxOut, pHdr);
 

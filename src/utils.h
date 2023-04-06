@@ -9,10 +9,9 @@
 #define GET_FILE_EXTN(filePath) std::filesystem::path(filePath).extension().u8string().substr(1, std::string::npos) // extension without '.'
 #define GET_FILE_PATH(filePath) std::filesystem::path(filePath).parent_path().u8string()
 
-// this suc
+
 static void Error(const char* errorMessage, ...)
 {
-	//printf("%s\n", errorMessage);
 	va_list inputArgs;
 	va_start(inputArgs, errorMessage);
 

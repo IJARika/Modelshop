@@ -22,6 +22,9 @@
     <ClCompile Include="datamodel\datamodel_element.cpp">
       <Filter>Source Files\datamodel</Filter>
     </ClCompile>
+    <ClCompile Include="shareddefs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils.h">

@@ -5,6 +5,7 @@
 //#include <rpc.h>
 #include <guiddef.h>
 
+#include "../shareddefs.h"
 #include "../math/vector.h"
 #include "../math/vector2d.h"
 #include "../math/vector4d.h"
@@ -54,40 +55,40 @@ enum DmAttributeType_t : char
 {
 	AT_UNKNOWN = 0,
 
-	AT_FIRST_VALUE_TYPE = 1,
+	AT_FIRST_VALUE_TYPE,
 
 	AT_ELEMENT = AT_FIRST_VALUE_TYPE,
-	AT_INT = 2,
-	AT_FLOAT = 3,
-	AT_BOOL = 4,
-	AT_STRING = 5, // int index for string dictionary
-	AT_VOID = 6,
-	AT_TIME = 7,
-	AT_COLOR = 8, //rgba
-	AT_VECTOR2 = 9,
-	AT_VECTOR3 = 10,
-	AT_VECTOR4 = 11,
-	AT_QANGLE = 12,
-	AT_QUATERNION = 13,
-	AT_VMATRIX = 14,
+	AT_INT,
+	AT_FLOAT,
+	AT_BOOL,
+	AT_STRING, // int index for string dictionary
+	AT_VOID,
+	AT_TIME,
+	AT_COLOR, //rgba
+	AT_VECTOR2,
+	AT_VECTOR3,
+	AT_VECTOR4,
+	AT_QANGLE,
+	AT_QUATERNION,
+	AT_VMATRIX,
 
-	AT_FIRST_ARRAY_TYPE = 15,
+	AT_FIRST_ARRAY_TYPE,
 
 	AT_ELEMENT_ARRAY = AT_FIRST_ARRAY_TYPE,
-	AT_INT_ARRAY = 16,
-	AT_FLOAT_ARRAY = 17,
-	AT_BOOL_ARRAY = 18,
-	AT_STRING_ARRAY = 19,
-	AT_VOID_ARRAY = 20,
-	AT_TIME_ARRAY = 21,
-	AT_COLOR_ARRAY = 22,
-	AT_VECTOR2_ARRAY = 23,
-	AT_VECTOR3_ARRAY = 24,
-	AT_VECTOR4_ARRAY = 25,
-	AT_QANGLE_ARRAY = 26,
-	AT_QUATERNION_ARRAY = 27,
-	AT_VMATRIX_ARRAY = 28,
-	AT_TYPE_COUNT = 29,
+	AT_INT_ARRAY,
+	AT_FLOAT_ARRAY,
+	AT_BOOL_ARRAY,
+	AT_STRING_ARRAY,
+	AT_VOID_ARRAY,
+	AT_TIME_ARRAY,
+	AT_COLOR_ARRAY,
+	AT_VECTOR2_ARRAY,
+	AT_VECTOR3_ARRAY,
+	AT_VECTOR4_ARRAY,
+	AT_QANGLE_ARRAY,
+	AT_QUATERNION_ARRAY,
+	AT_VMATRIX_ARRAY,
+	AT_TYPE_COUNT,
 
 	AT_TYPE_INVALID // anything else should be this
 };
@@ -135,14 +136,14 @@ class CDataModelAttributeList
 public:
 	void AddAttribute(int* name, char* nameStr, DmAttributeType_t* type, void* value);
 	void AddAttribute(DmAttribute* attribute);
-	DmAttribute* GetAttribute(char* nameStr);
+	inline DmAttribute* const GetAttribute(const char* nameStr) { return attributes.find(nameStr)->second; };
 
 	//int GetAttributeValueSize(DmAttribute* attribute);
-	int GetAttributeCount();
+	inline const int GetAttributeCount() const { return attributes.size(); };
 
 	// accessor funcs
-	int* pNumAttributes();
-	std::map<const char*, DmAttribute*>* pAttributes();
+	//inline int* pNumAttributes() { return &numAttributes; };
+	inline std::map<const char*, DmAttribute*>* pAttributes() { return &attributes; };
 	//inline int* pIndex() { return &attributeListIndex; }
 
 	// reading/writing
@@ -151,8 +152,7 @@ public:
 	int attributeListIndex;
 
 private:
-	int numAttributes;
-	std::map<const char*, DmAttribute*> Attributes;
+	std::map<const char*, DmAttribute*> attributes;
 };
 
 
@@ -180,6 +180,8 @@ struct DmElement
 	
 	int elementSet; // if there are duplicate sets of elements, which is this one in?
 	size_t elementHash;
+
+	// ptr to list?
 };
 
 
@@ -202,39 +204,43 @@ public:
 	~CDataModel();
 
 	// element
-	size_t GetElementHash(DmElement* element);
+	size_t GetElementHash(const DmElement* element);
 	size_t GetElementHash(char* type, char* name, int set);
-	size_t GetElementHash(const char* type, const char* name, int set);
+	size_t GetElementHash(const char* type, const char* name, const int set);
+
+	DmElement* const FindElement(const size_t hash);
 
 	int AddElement(DmElement* element, CDataModelAttributeList* list);
-	int AddElement(size_t* elementHash); // adds a new element without need for input
-	DmElement* AddElement(const char* type, const char* name, int set);
+	int AddElement(const size_t hash); // adds a new element without need for input
+	DmElement* AddElement(const char* type, const char* name, int set, DmElement* pElement = nullptr, CDataModelAttributeList* pAttributes = nullptr);
 
-	DmElement* GetElement(size_t hash);
-	DmElement* GetElement(int index);
-	int GetElementIndex(size_t hash);
+	DmElement* const GetElement(const size_t hash);
+	inline DmElement* const GetElement(const int index) { return elementList.at(index); };
+	inline const int GetElementIndex(const size_t hash);
 
 	// attributes
-	int AddAttributeList(CDataModelAttributeList* list);
-	CDataModelAttributeList* GetAttributeList(int* index);
+	//int AddAttributeList(CDataModelAttributeList* list);
+	inline CDataModelAttributeList* const GetAttributeList(const int index) { return attributeList.at(index); };
 	void AddAttribute(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, void* value);
 	void AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*> values, int numValues);
 
-	// accessor funcs
-	// accessor funcs
-	inline DataModelType_t* pDataModelType() { return &dataModelType; }
-	inline DmElement* pRootElement() { return rootElement; }
-	inline CDataModelAttributeList* pRootAttributeList() { return rootAttributeList; }
+	// general
+	inline const int GetElementCount() const { return elementList.size(); };
 
-	inline std::string* pHeader() { return &dataModelHeader; }
-	inline CDataModelStringDict* pStringDict() { return &stringDict; }
-	inline std::vector<DmElement*>* pElementList() { return &elementList; }
-	inline std::vector<CDataModelAttributeList*>* pAttributeList() { return &attributeList; }
+	// accessor funcs
+	inline DataModelType_t* const pDataModelType() { return &dataModelType; }
+	inline DmElement* const pRootElement() { return rootElement; }
+	inline CDataModelAttributeList* const pRootAttributeList() { return rootAttributeList; }
+
+	inline std::string* const pHeader() { return &dataModelHeader; }
+	inline CDataModelStringDict* const pStringDict() { return &stringDict; }
+	inline std::vector<DmElement*>* const pElementList() { return &elementList; }
+	inline std::vector<CDataModelAttributeList*>* const pAttributeList() { return &attributeList; }
 
 	// writing/reading
 	void WriteDataModel(char** pData);
 
-protected: // these need better packing (?)
+private: // these need better packing (?)
 	// interal
 	DataModelType_t dataModelType;
 	DmElement* rootElement;
@@ -244,7 +250,6 @@ protected: // these need better packing (?)
 	std::string dataModelHeader;
 	CDataModelStringDict stringDict;
 
-	int numElements;
 	std::vector<DmElement*> elementList;
 	std::vector<CDataModelAttributeList*> attributeList; // should match the total number of elements
 };

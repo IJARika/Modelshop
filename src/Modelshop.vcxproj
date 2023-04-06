@@ -145,6 +145,7 @@
     <ClCompile Include="datamodel\datamodel_element.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="math\mathlib.cpp" />
+    <ClCompile Include="shareddefs.cpp" />
     <ClCompile Include="studio\bone_setup.cpp" />
     <ClCompile Include="studio\studio.cpp" />
     <ClCompile Include="studio\studio_extract.cpp" />

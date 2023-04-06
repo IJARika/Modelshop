@@ -317,17 +317,17 @@ namespace vvd
 		int vertexDataStart; // offset from base to vertex block
 		int tangentDataStart; // offset from base to tangent block
 
-		const vertexFileFixup_t* GetFixupData(int i) const
+		const vertexFileFixup_t* const GetFixupData(int i) const
 		{
 			return reinterpret_cast<vertexFileFixup_t*>((char*)this + fixupTableStart) + i;
 		}
 
-		const mstudiovertex_t* GetVertexData(int i) const
+		const mstudiovertex_t* const GetVertexData(int i) const
 		{
 			return reinterpret_cast<mstudiovertex_t*>((char*)this + vertexDataStart) + i;
 		}
 
-		const Vector4D* GetTangentData(int i) const
+		const Vector4D* const GetTangentData(int i) const
 		{
 			return reinterpret_cast<Vector4D*>((char*)this + tangentDataStart) + i;
 		}
@@ -348,12 +348,12 @@ namespace vvc
 		int colorDataStart;
 		int uv2DataStart;
 
-		const VertexColor_t* GetColorData(int i) const
+		const VertexColor_t* const GetColorData(int i) const
 		{
 			return reinterpret_cast<VertexColor_t*>((char*)this + colorDataStart) + i;
 		}
 
-		const Vector2D* GetUVData(int i) const
+		const Vector2D* const GetUVData(int i) const
 		{
 			return reinterpret_cast<Vector2D*>((char*)this + uv2DataStart) + i;
 		}
@@ -377,7 +377,7 @@ namespace vvw
 
 		int weightDataStart; // index into mstudioboneweightextra_t array
 
-		const mstudioboneweightextra_t* GetWeightData(int i) const
+		const mstudioboneweightextra_t* const GetWeightData(int i) const
 		{
 			return reinterpret_cast<mstudioboneweightextra_t*>((char*)this + weightDataStart) + i;
 		}
@@ -1808,6 +1808,29 @@ namespace r1
 // Titanfall 2, version '53'
 namespace r2
 {
+	struct mstudiopanelmesh_t
+	{
+		int numParents; // apparently you can have meshes parented to more than one bone(?)    
+		int numVerts; // number of verts
+		int numFaces; // number of faces
+
+		int partentIndex; // this gets padding out front of it to even off the struct
+
+		int vertexIndex; // offset into vertex data
+		int indiceIndex; // offsets into a vertex map for each quad
+		int faceUvIndex; // offset into uv section
+
+		char unk[4]; // zero sometimes, others not. has to do with face clipping.
+
+		inline char* const pszPanelName() const { return ((char*)this + sizeof(this)); }
+	};
+
+	struct mstudiopanelhdr_t
+	{
+		int nameHash; // uses rui hash algo
+		int meshIndex; // offset to the actual mesh, aligned to 16 bytes within the mdl
+	};
+
 	struct mstudiopertrihdr_t
 	{
 		short version; // game requires this to be 2 or else it errors
@@ -2668,7 +2691,7 @@ namespace r2
 		// max is definitely 256 because 8bit uint limit
 		int numbones; // bones
 		int boneindex;
-		inline mstudiobone_t* pBone(int i) const { assert(i >= 0 && i < numbones); return reinterpret_cast<mstudiobone_t*>((char*)this + boneindex) + i; }
+		inline mstudiobone_t* const pBone(int i) const { assert(i >= 0 && i < numbones); return reinterpret_cast<mstudiobone_t*>((char*)this + boneindex) + i; }
 
 		int numbonecontrollers; // bone controllers
 		int bonecontrollerindex;
@@ -2703,7 +2726,7 @@ namespace r2
 
 		int numbodyparts;
 		int bodypartindex;
-		inline mstudiobodyparts_t* pBodypart(int i) const { assert(i >= 0 && i < numbodyparts); return reinterpret_cast<mstudiobodyparts_t*>((char*)this + bodypartindex) + i; }
+		inline mstudiobodyparts_t* const pBodypart(int i) const { assert(i >= 0 && i < numbodyparts); return reinterpret_cast<mstudiobodyparts_t*>((char*)this + bodypartindex) + i; }
 
 		int numlocalattachments;
 		int localattachmentindex;
@@ -2724,8 +2747,9 @@ namespace r2
 		int numikchains;
 		int ikchainindex;
 
-		int numruimeshes;
-		int ruimeshindex;
+		int numUiPanels;
+		int uiPanelIndex;
+		inline mstudiopanelhdr_t* const pUiPanel(int i) const { assert(i >= 0 && i < numUiPanels); return reinterpret_cast<mstudiopanelhdr_t*>((char*)this + uiPanelIndex) + i; }
 
 		int numlocalposeparameters;
 		int localposeparamindex;
@@ -2790,7 +2814,7 @@ namespace r2
 		int	illumpositionattachmentindex;
 
 		int linearboneindex;
-		inline mstudiolinearbone_t* pLinearBones() const { return linearboneindex ? reinterpret_cast<mstudiolinearbone_t*>((char*)this + linearboneindex) : nullptr; }
+		inline mstudiolinearbone_t* const pLinearBones() const { return linearboneindex ? reinterpret_cast<mstudiolinearbone_t*>((char*)this + linearboneindex) : nullptr; }
 
 		int m_nBoneFlexDriverCount;
 		int m_nBoneFlexDriverIndex;
@@ -2817,9 +2841,9 @@ namespace r2
 		int vvcsize; // VVC / IDCV 
 		int vphysize; // VPHY / IVPS
 
-		inline vtx::FileHeader_t* pVTX() const { return vtxsize > 0 ? reinterpret_cast<vtx::FileHeader_t*>((char*)this + vtxindex) : nullptr; }
-		inline vvd::vertexFileHeader_t* pVVD() const { return vvdsize > 0 ? reinterpret_cast<vvd::vertexFileHeader_t*>((char*)this + vvdindex) : nullptr; }
-		inline vvc::vertexColorFileHeader_t* pVVC() const { return vvcsize > 0 ? reinterpret_cast<vvc::vertexColorFileHeader_t*>((char*)this + vvcindex) : nullptr; }
+		inline vtx::FileHeader_t* const pVTX() const { return vtxsize > 0 ? reinterpret_cast<vtx::FileHeader_t*>((char*)this + vtxindex) : nullptr; }
+		inline vvd::vertexFileHeader_t* const pVVD() const { return vvdsize > 0 ? reinterpret_cast<vvd::vertexFileHeader_t*>((char*)this + vvdindex) : nullptr; }
+		inline vvc::vertexColorFileHeader_t* const pVVC() const { return vvcsize > 0 ? reinterpret_cast<vvc::vertexColorFileHeader_t*>((char*)this + vvcindex) : nullptr; }
 
 		// this data block is related to the vphy, if it's not present the data will not be written
 		// definitely related to phy, apex phy has this merged into it
@@ -3263,8 +3287,8 @@ namespace r5
 			int ikchainindex;
 
 			// mesh panels for using rui on models, primarily for weapons
-			int numruimeshes;
-			int ruimeshindex;
+			int numUiPanels;
+			int uiPanelIndex;
 
 			int numlocalposeparameters;
 			int localposeparamindex;
@@ -3809,13 +3833,13 @@ namespace r5
 			unsigned short sznameindex; // No longer stored in string block, uses string in header.
 			char name[32]; // The internal name of the model, padding with null chars.
 						   // Typically "my_model.mdl" will have an internal name of "my_model"
-			char unk_v16; // name ?
+			char unk_v16; // name 33?
 
 			char surfacepropLookup; // saved in the file
 
 			float mass;
 
-			int version; // time will tell
+			int unk; // this is not version
 
 			unsigned short hitboxsetindex;
 			char numhitboxsets;
@@ -3867,8 +3891,8 @@ namespace r5
 			unsigned short bodypartindex;
 
 			// this is rui meshes
-			unsigned short numruimeshes;
-			unsigned short ruimeshindex;
+			unsigned short numUiPanels;
+			unsigned short uiPanelIndex;
 
 			unsigned short numlocalposeparameters;
 			unsigned short localposeparamindex;
