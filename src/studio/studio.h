@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstddef>
+#include <vector>
 
 #include "../math/vector.h"
 #include "../math/compressed_vector.h"
@@ -3950,4 +3951,11 @@ namespace r5
 			//unsigned short unkshorts[7];
 		};
 	}
+}
+
+
+// custom func defs
+namespace r2
+{
+	std::vector<unsigned char> GetBoneChildren(const unsigned char boneIndex, studiohdr_t* pHdr);
 }

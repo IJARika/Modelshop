@@ -29,38 +29,38 @@ void DMXRenameLODs(std::string& fileName, int lodIdx)
 	}
 }
 
-// bad name for what this does
-//void DMXBuildSkeletonR2(CDataModel* dmx, r2::studiohdr_t* pHdr)
-//{
-//	DmAttribute newAttribute{};
-//	int lefunnitrol = 0;
-//
-//	newAttribute.attributeName = dmx->pStringDict()->AddToStringDict("test");
-//	newAttribute.attributeType = DmAttributeType_t::AT_STRING_ARRAY;
-//	//newAttribute.attributeValue = &lefunnitrol;
-//	newAttribute.attributeNameStr = "test";
-//
-//	std::vector<void*> alittlebitoftrolling;
-//
-//	/*alittlebitoftrolling.push_back(&pHdr->flags);
-//	alittlebitoftrolling.push_back(&pHdr->checksum);
-//	alittlebitoftrolling.push_back(&pHdr->version);*/
-//
-//	alittlebitoftrolling.push_back(pHdr->pszName());
-//	alittlebitoftrolling.push_back(pHdr->pszSourceFiles());
-//
-//	newAttribute.attributeValues = alittlebitoftrolling;
-//	newAttribute.numValues = 2;
-//
-//	dmx->pRootAttributeList()->AddAttribute(&newAttribute);
-//
-//	/*UUID rootUUID;
-//	CDataModelAttributeList rootList;
-//
-//	dmx->pElementList()->AddElement(dmx->pStringDict()->AddToStringDict("CDmElement"), dmx->pStringDict()->AddToStringDict(pHdr->pszName()), rootUUID, rootList);
-//
-//	dmx->pElementList()->pAttributeList(0)->AddAttribute(dmx->pStringDict()->AddToStringDict("PISS"), 6, nullptr);*/
-//}
+void SetupDataModelJointsR2(CDataModel& pDataModel, CDmeModel* pDmeModel, r2::studiohdr_t* const pHdr)
+{
+	pDmeModel->AddBaseState("bind", 0);
+
+	CDmeTransformList* transformList = pDmeModel->pBaseStates(0);
+
+	for (int boneIdx = 0; boneIdx < pHdr->numbones; boneIdx++)
+	{
+		r2::mstudiobone_t* bone = pHdr->pBone(boneIdx);
+
+		CDmeJoint* newJoint = pDmeModel->AddJoint(bone->pszName(), 0);
+		newJoint->SetUpSurfaceProp(bone->pszSurfaceProp());
+
+		newJoint->transform->position = bone->pos;
+		newJoint->transform->orientation = bone->quat;
+		newJoint->transform->scale = bone->scale;
+
+		transformList->AddTransform(bone->pszName(), 1, bone->pos, bone->quat, bone->scale);
+	}
+
+	// setup bone heirrarchy, should be in same order as mdl
+	for (int jointIdx = 0; jointIdx < pDmeModel->jointList.size(); jointIdx++)
+	{
+		CDmeJoint* joint = pDmeModel->pJoint(jointIdx);
+		std::vector<unsigned char> jointChildren = r2::GetBoneChildren(jointIdx, pHdr);
+
+		for (auto childIdx : jointChildren)
+		{
+			joint->AddChildJoint(pDmeModel->pJoint(childIdx));
+		}
+	}
+}
 
 // add vvw
 void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeader_t* pVVC, const int lod, std::vector<const vvd::mstudiovertex_t*>& vvdVerts, std::vector<const VertexColor_t*>& vvcColors, std::vector<const Vector2D*>& vvcUV2s)
@@ -157,12 +157,10 @@ void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
 				dmxModel->AddAsSkeleton();
 				dmxModel->AddAsModel();
 
-				// messing around
-				dmxModel->AddAttrTransform();
-				dmxModel->AddAttrVisible();
-				dmxModel->AddAttrUpAxis();
+				SetupDataModelJointsR2(dmxOut, dmxModel, pHdr);
 
-				//DMXBuildSkeletonR2(&dmxOut, pHdr);
+				dmxModel->AddChildBaseJoint(); // this has to be done after joints are setup
+				dmxModel->SetUpAxis();
 
 				char* pBase = new char[FILEBUFSIZE];
 				char* pData = pBase;

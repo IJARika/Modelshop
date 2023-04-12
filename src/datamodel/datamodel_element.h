@@ -6,22 +6,18 @@
 #pragma once
 
 
-//===============
-// CDmeTransform
-//===============
+//==========
+// CDmeBase
+//==========
 
-class CDmeTransform : CDataModel
+class CDmeBase
 {
 public:
-	CDmeTransform(CDataModel* datamodel, const char* name, int set);
+	CDmeBase() = default;
 
 	inline int* const pIndex() { return &elementIndex; };
 
-	Vector position;
-	Quaternion orientation;
-	Vector scale = { 1.0f, 1.0f, 1.0f }; // this is for respawn specific models
-
-private:
+protected:
 	CDataModel* pBaseDataModel;
 	DmElement* pElement;
 	CDataModelAttributeList* pAttributes;
@@ -29,6 +25,70 @@ private:
 	const char* elementName;
 	int elementSet;
 	int elementIndex;
+
+	inline void SetupElementBase(CDataModel* pDataModel, const char* type, const char* name, const int set);
+};
+
+
+//===============
+// CDmeTransform
+//===============
+
+class CDmeTransform : public CDmeBase
+{
+public:
+	CDmeTransform(CDataModel* pDataModel, const char* name, const int set);
+
+	Vector position;
+	Quaternion orientation;
+	Vector scale; // this is for respawn specific models
+};
+
+
+//===================
+// CDmeTransformList
+//===================
+
+class CDmeTransformList : public CDmeBase
+{
+public:
+	CDmeTransformList(CDataModel* pDataModel, const char* name, const int set);
+	~CDmeTransformList();
+
+	std::vector<int*> transforms;
+
+	void AddTransform(const char* name, const int set, Vector& position, Quaternion& rotation, Vector& scale);
+
+private:
+	std::vector<CDmeTransform*> transformElements;
+};
+
+
+//===========
+// CDmeJoint
+//===========
+
+class CDmeJoint : public CDmeBase
+{
+public:
+	CDmeJoint(CDataModel* pDataModel, const char* name, const int set);
+	~CDmeJoint();
+
+	CDmeTransform* transform;
+	//CDmeTransform* shape;
+	int shape = -1; // hardcode as I'm not really sure what this attribute is for
+	bool visible = 1;
+	std::vector<int*> children;
+	int _surfaceProp = -1;
+	bool lockInfluenceWeights = 0; // unsure what this is for as well
+
+	void AddChildJoint(CDmeJoint* pChildJoint);
+	void SetUpSurfaceProp(const char* surfaceProp = "default");
+
+private:
+	std::vector<CDmeJoint*> childrenElements;
+
+	const char* surfacePropStr = "default";
 };
 
 
@@ -57,48 +117,38 @@ static const char* modelAxis[ModelAxis_t::_COUNT]
 	"-Z"
 };
 
-class CDmeModel : private CDataModel
+class CDmeModel : public CDmeBase
 {
 public:
-	CDmeModel(CDataModel* datamodel);
+	CDmeModel(CDataModel* pDataModel);
 	~CDmeModel();
 
 	// add to base DataModel
-	void AddAsModel();
-	void AddAsSkeleton();
-
-	// add attributes
-	void AddAttrTransform();
-	// shape
-	void AddAttrVisible(bool isVisible = 1); // default to 1
-	// children
-	// jointList
-	// baseStates
-	void AddAttrUpAxis(ModelAxis_t axis = ModelAxis_t::AXIS_Z);
-
-private:
-	CDataModel* pBaseDataModel;
-	DmElement* pElement;
-	CDataModelAttributeList* pAttributes;
-	//int elementIndex = pElement->elementIndex; // index of this element in elementList
-
-	const char* upAxis = "";
+	inline void AddAsModel() { pBaseDataModel->AddAttribute(pBaseDataModel->pRootAttributeList(), "model", DmAttributeType_t::AT_ELEMENT, &pElement->elementIndex); };
+	inline void AddAsSkeleton() { pBaseDataModel->AddAttribute(pBaseDataModel->pRootAttributeList(), "skeleton", DmAttributeType_t::AT_ELEMENT, &pElement->elementIndex); };
 
 	CDmeTransform* transform;
-	//int modelTransform = -1;
-	int modelShape = -1;
+	//CDmeTransform* shape; // need a way to do 'null' elements i.e. index of -1
+	int shape = -1; // hardcode as I'm not really sure what this attribute is for
+	bool visible = 1;
+	std::vector<int*> children;
+	std::vector<int*> jointList;
+	std::vector<int*> baseStates;
+	int upAxis;
 
-	bool modelVisible = 1;
+	CDmeJoint* AddJoint(const char* name, const int set);
+	void AddBaseState(const char* name, const int set);
+	void SetUpAxis(ModelAxis_t axis = ModelAxis_t::AXIS_Z);
 
-	int modelNumChildren = 0;
-	std::vector<int> modelChildren;
+	void AddChildBaseJoint();
+	void AddChildModel();
 
-	int modelNumJoints = 0; // number of bones
-	std::vector<int> modelJointList;
+	CDmeJoint* const pJoint(const int index) { return jointListElements.at(index); }
+	CDmeTransformList* const pBaseStates(const int index) { return baseStateElements.at(index); }
 
-	int modelNumBaseStates = 0;
-	std::vector<int> modelBaseStates;
+private:
+	std::vector<CDmeJoint*> jointListElements;
+	std::vector<CDmeTransformList*> baseStateElements;
 
-	int modelUpAxis;
- 
+	const char* upAxisStr = "";
 };

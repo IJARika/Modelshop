@@ -120,15 +120,17 @@ struct DmAttribute
 	const char* attributeNameStr;
 	int attributeName; // string dictionary index
 
-	int numValues; // number of values (only set if array type)
-	void* attributeValue;
-	std::vector<void*> attributeValues;	
-	
 	DmAttributeType_t attributeType; // DmAttributeType_t
 
-	template<class T> __forceinline void WriteAttributeValue(char** pData, void* attrVal, int attrOptSize = -1);
-	template<class T> void WriteAttributeArray(char** pData, int* numVals, std::vector<void*> attrVals, int attrOptSize = -1);
-	void WriteAttributeValue(char** pData);
+	//int numValues; // cut this
+	void* attributeValue;
+	//std::vector<void*>* attributeValues;	
+
+	template<class T> __forceinline void WriteSingle(char** pData, void* attrVal, int attrOptSize = -1);
+	//template<class T> void WriteAttributeArray(char** pData, int* numVals, std::vector<void*>* attrVals, int attrOptSize = -1);
+	template<class T> void WriteArray(char** pData, void* attrVals, int attrOptSize = -1);
+	__forceinline void WriteStrings(char** pData, void* attrStrs);
+	void WriteValue(char** pData);
 };
 
 class CDataModelAttributeList
@@ -181,7 +183,7 @@ struct DmElement
 	int elementSet; // if there are duplicate sets of elements, which is this one in?
 	size_t elementHash;
 
-	// ptr to list?
+	// ptr to attr list?
 };
 
 
@@ -222,7 +224,7 @@ public:
 	//int AddAttributeList(CDataModelAttributeList* list);
 	inline CDataModelAttributeList* const GetAttributeList(const int index) { return attributeList.at(index); };
 	void AddAttribute(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, void* value);
-	void AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*> values, int numValues);
+	//void AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*>* values, int numValues = -1);
 
 	// general
 	inline const int GetElementCount() const { return elementList.size(); };

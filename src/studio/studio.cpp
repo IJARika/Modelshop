@@ -31,18 +31,18 @@ namespace r2
 		return panim = reinterpret_cast<mstudio_rle_anim_t*>((char*)this + index);
 	}
 
-	std::vector<unsigned char> GetBoneChildren(unsigned char* boneIndex, unsigned char &numChildren, studiohdr_t* pHdr)
+	std::vector<unsigned char> GetBoneChildren(const unsigned char boneIndex, studiohdr_t* pHdr)
 	{
 		std::vector<unsigned char> children;
 
-		for (int i = *boneIndex; i < pHdr->numbones; i++)
+		for (int i = boneIndex; i < pHdr->numbones; i++)
 		{
 			unsigned char parent = pHdr->pBone(i)->parent;
 
-			if (parent != *boneIndex)
+			if (parent != boneIndex)
 				continue;
 
-			children.push_back(parent);
+			children.push_back(i);
 		}
 
 		return children;
