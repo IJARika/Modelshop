@@ -5,4 +5,7 @@
 
 #pragma once
 
-void DMXFromMDL(char* pMdlBuf, const std::string fileDir);
+namespace r2
+{
+	void DMXFromMDL(char* pMdlBuf, const std::string fileDir);
+}

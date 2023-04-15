@@ -183,6 +183,7 @@ struct DmElement
 	int elementSet; // if there are duplicate sets of elements, which is this one in?
 	size_t elementHash;
 
+	void* pDme; // pointer to specific element class using this
 	// ptr to attr list?
 };
 
@@ -223,7 +224,8 @@ public:
 	// attributes
 	//int AddAttributeList(CDataModelAttributeList* list);
 	inline CDataModelAttributeList* const GetAttributeList(const int index) { return attributeList.at(index); };
-	void AddAttribute(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, void* value);
+	void AddAttribute(CDataModelAttributeList* pAttributes, const char* attributeName, DmAttributeType_t type, void* value);
+	void EditAttribute(CDataModelAttributeList* pAttributes, const char* attributeName, DmAttributeType_t type, void* newValue);
 	//void AddAttributeArray(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, std::vector<void*>* values, int numValues = -1);
 
 	// general

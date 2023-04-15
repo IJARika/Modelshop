@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 	std::string dmxOutPath = std::filesystem::path(filePath).parent_path().append("dmx").u8string();
 	std::filesystem::create_directories(dmxOutPath);
 
-	DMXFromMDL(mdlBuf, dmxOutPath);
+	r2::DMXFromMDL(mdlBuf, dmxOutPath);
 
 	delete[] mdlBuf;
 	mdlIn.close(); // shouldn't need this

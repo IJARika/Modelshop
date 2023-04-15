@@ -29,40 +29,7 @@ void DMXRenameLODs(std::string& fileName, int lodIdx)
 	}
 }
 
-void SetupDataModelJointsR2(CDataModel& pDataModel, CDmeModel* pDmeModel, r2::studiohdr_t* const pHdr)
-{
-	pDmeModel->AddBaseState("bind", 0);
-
-	CDmeTransformList* transformList = pDmeModel->pBaseStates(0);
-
-	for (int boneIdx = 0; boneIdx < pHdr->numbones; boneIdx++)
-	{
-		r2::mstudiobone_t* bone = pHdr->pBone(boneIdx);
-
-		CDmeJoint* newJoint = pDmeModel->AddJoint(bone->pszName(), 0);
-		newJoint->SetUpSurfaceProp(bone->pszSurfaceProp());
-
-		newJoint->transform->position = bone->pos;
-		newJoint->transform->orientation = bone->quat;
-		newJoint->transform->scale = bone->scale;
-
-		transformList->AddTransform(bone->pszName(), 1, bone->pos, bone->quat, bone->scale);
-	}
-
-	// setup bone heirrarchy, should be in same order as mdl
-	for (int jointIdx = 0; jointIdx < pDmeModel->jointList.size(); jointIdx++)
-	{
-		CDmeJoint* joint = pDmeModel->pJoint(jointIdx);
-		std::vector<unsigned char> jointChildren = r2::GetBoneChildren(jointIdx, pHdr);
-
-		for (auto childIdx : jointChildren)
-		{
-			joint->AddChildJoint(pDmeModel->pJoint(childIdx));
-		}
-	}
-}
-
-// add vvw
+// add vvw, or maybe we should do vvw when inserting the verts into whatever format is being used
 void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeader_t* pVVC, const int lod, std::vector<const vvd::mstudiovertex_t*>& vvdVerts, std::vector<const VertexColor_t*>& vvcColors, std::vector<const Vector2D*>& vvcUV2s)
 {
 	// rebuild vertex vector per lod just incase it has fixups
@@ -117,71 +84,112 @@ void GetVertexesFromVVD(vvd::vertexFileHeader_t* pVVD, vvc::vertexColorFileHeade
 	}
 }
 
-void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
+namespace r2
 {
-	// setup required bufferes
-	r2::studiohdr_t* const pHdr = reinterpret_cast<r2::studiohdr_t*>(pMdlBuf);
-	vtx::FileHeader_t* const pVtx = pHdr->pVTX();
-	vvd::vertexFileHeader_t* const pVVD = pHdr->pVVD();
-	vvc::vertexColorFileHeader_t* const pVVC = pHdr->pVVC();
-
-	for (int lodIdx = 0; lodIdx < pVtx->numLODs; lodIdx++)
+	void SetupDataModelJoints(CDataModel& pDataModel, CDmeModel* pDmeModel, studiohdr_t* const pHdr)
 	{
-		std::vector<const vvd::mstudiovertex_t*> vvdVerts;
-		std::vector<const VertexColor_t*> vvcColors;
-		std::vector<const Vector2D*> vvcUV2s;
+		pDmeModel->AddBaseState("bind", 0);
 
-		GetVertexesFromVVD(pVVD, pVVC, lodIdx, vvdVerts, vvcColors, vvcUV2s);
+		CDmeTransformList* transformList = pDmeModel->pBaseStates(0);
 
-		for (int bodypartIdx = 0; bodypartIdx < pHdr->numbodyparts; bodypartIdx++)
+		for (int boneIdx = 0; boneIdx < pHdr->numbones; boneIdx++)
 		{
-			r2::mstudiobodyparts_t* pBodypart = pHdr->pBodypart(bodypartIdx);
-			vtx::BodyPartHeader_t* pVtxBodyPart = pVtx->pBodyPart(bodypartIdx);
+			r2::mstudiobone_t* bone = pHdr->pBone(boneIdx);
 
-			for (int modelIdx = 0; modelIdx < pBodypart->nummodels; modelIdx++)
+			CDmeJoint* newJoint = pDmeModel->AddJoint(bone->pszName(), 0);
+			newJoint->SetUpSurfaceProp(bone->pszSurfaceProp());
+			newJoint->AddTransform(bone->pszName(), 0);
+
+			newJoint->transform->position = bone->pos;
+			newJoint->transform->orientation = bone->quat;
+			newJoint->transform->scale = bone->scale;
+
+			transformList->AddTransform(bone->pszName(), 1, bone->pos, bone->quat, bone->scale);
+		}
+
+		// setup bone heirrarchy, should be in same order as mdl
+		for (int jointIdx = 0; jointIdx < pDmeModel->jointList.size(); jointIdx++)
+		{
+			CDmeJoint* joint = pDmeModel->pJoint(jointIdx);
+			std::vector<unsigned char> jointChildren = GetBoneChildren(jointIdx, pHdr);
+
+			for (auto childIdx : jointChildren)
 			{
-				r2::mstudiomodel_t* pModel = pBodypart->pModel(modelIdx);
-				vtx::ModelHeader_t* pVtxModel = pVtxBodyPart->pModel(modelIdx);
+				joint->AddChildJoint(pDmeModel->pJoint(childIdx));
+			}
+		}
+	}
 
-				if (!pModel->nummeshes)
+	void DMXFromMDL(char* pMdlBuf, const std::string fileDir)
+	{
+		// setup required bufferes
+		studiohdr_t* const pHdr = reinterpret_cast<studiohdr_t*>(pMdlBuf);
+		vtx::FileHeader_t* const pVtx = pHdr->pVTX();
+		vvd::vertexFileHeader_t* const pVVD = pHdr->pVVD();
+		vvc::vertexColorFileHeader_t* const pVVC = pHdr->pVVC();
+
+		for (int lodIdx = 0; lodIdx < pVtx->numLODs; lodIdx++)
+		{
+			std::vector<const vvd::mstudiovertex_t*> vvdVerts;
+			std::vector<const VertexColor_t*> vvcColors;
+			std::vector<const Vector2D*> vvcUV2s;
+
+			GetVertexesFromVVD(pVVD, pVVC, lodIdx, vvdVerts, vvcColors, vvcUV2s);
+
+			for (int bodypartIdx = 0; bodypartIdx < pHdr->numbodyparts; bodypartIdx++)
+			{
+				mstudiobodyparts_t* pBodypart = pHdr->pBodypart(bodypartIdx);
+				vtx::BodyPartHeader_t* pVtxBodyPart = pVtx->pBodyPart(bodypartIdx);
+
+				for (int modelIdx = 0; modelIdx < pBodypart->nummodels; modelIdx++)
 				{
-					continue;
+					mstudiomodel_t* pModel = pBodypart->pModel(modelIdx);
+					vtx::ModelHeader_t* pVtxModel = pVtxBodyPart->pModel(modelIdx);
+
+					if (!pModel->nummeshes)
+					{
+						continue;
+					}
+
+					vtx::ModelLODHeader_t* pVtxLOD = pVtxModel->pLOD(lodIdx);
+
+					// setup filename
+					std::string fileName = GET_FILE_STEM(pModel->name);
+
+					if (lodIdx > 0)
+					{
+						DMXRenameLODs(fileName, lodIdx);
+					}
+
+					// dmx gaming
+					CDataModel dmxOut(DataModelType_t::DM_MODEL);
+
+					CDmeModel* dmxModel = new CDmeModel(&dmxOut);
+					dmxModel->AddTransform("unnamed", 0);
+
+					dmxModel->SetUpAxis();
+
+					SetupDataModelJoints(dmxOut, dmxModel, pHdr);
+					dmxModel->AddChildJoint(); // this has to be done after joints are setup
+
+					dmxModel->AddChildDag(fileName.c_str(), 0);
+
+					// write model
+					char* pBase = new char[FILEBUFSIZE];
+					char* pData = pBase;
+
+					dmxOut.WriteDataModel(&pData);
+			
+					// file out
+					fileName.append(".dmx");
+
+					std::string fileOutPath = std::filesystem::path(fileDir).append(fileName).u8string();
+
+					std::ofstream dmxFile(fileOutPath, std::ios::out | std::ios::binary);
+					dmxFile.write(pBase, pData - pBase);
+
+					delete dmxModel;
 				}
-
-				vtx::ModelLODHeader_t* pVtxLOD = pVtxModel->pLOD(lodIdx);
-
-				CDataModel dmxOut(DataModelType_t::DM_MODEL);
-
-				CDmeModel* dmxModel = new CDmeModel(&dmxOut);
-
-				dmxModel->AddAsSkeleton();
-				dmxModel->AddAsModel();
-
-				SetupDataModelJointsR2(dmxOut, dmxModel, pHdr);
-
-				dmxModel->AddChildBaseJoint(); // this has to be done after joints are setup
-				dmxModel->SetUpAxis();
-
-				char* pBase = new char[FILEBUFSIZE];
-				char* pData = pBase;
-
-				dmxOut.WriteDataModel(&pData);
-
-				std::string fileName = GET_FILE_STEM(pModel->name);
-
-				if (lodIdx > 0)
-				{
-					DMXRenameLODs(fileName, lodIdx);
-				}
-
-				fileName.append(".dmx");
-
-				std::string fileOutPath = std::filesystem::path(fileDir).append(fileName).u8string();
-
-				std::ofstream dmxFile(fileOutPath, std::ios::out | std::ios::binary);
-				dmxFile.write(pBase, pData - pBase);
-
-				delete dmxModel;
 			}
 		}
 	}

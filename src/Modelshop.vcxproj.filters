@@ -25,6 +25,12 @@
     <ClCompile Include="shareddefs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="datamodel\cdmebase.cpp">
+      <Filter>Source Files\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="datamodel\cdmevertexdata.cpp">
+      <Filter>Source Files\datamodel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils.h">
@@ -73,6 +79,12 @@
       <Filter>Header Files\datamodel</Filter>
     </ClInclude>
     <ClInclude Include="datamodel\datamodel_test.h">
+      <Filter>Header Files\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="datamodel\cdmebase.h">
+      <Filter>Header Files\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="datamodel\cdmevertexdata.h">
       <Filter>Header Files\datamodel</Filter>
     </ClInclude>
   </ItemGroup>

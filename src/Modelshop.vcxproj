@@ -141,6 +141,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="datamodel\cdmebase.cpp" />
+    <ClCompile Include="datamodel\cdmevertexdata.cpp" />
     <ClCompile Include="datamodel\datamodel.cpp" />
     <ClCompile Include="datamodel\datamodel_element.cpp" />
     <ClCompile Include="main.cpp" />
@@ -151,6 +153,8 @@
     <ClCompile Include="studio\studio_extract.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="datamodel\cdmebase.h" />
+    <ClInclude Include="datamodel\cdmevertexdata.h" />
     <ClInclude Include="datamodel\datamodel.h" />
     <ClInclude Include="datamodel\datamodel_element.h" />
     <ClInclude Include="datamodel\datamodel_test.h" />

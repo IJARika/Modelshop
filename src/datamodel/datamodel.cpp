@@ -430,6 +430,7 @@ DmElement* CDataModel::AddElement(const char* type, const char* name, int set, D
 	elementList.push_back(newElement);
 	attributeList.push_back(newList);
 
+	// if provided set the ptrs to our new element/attribute list
 	if (pElement)
 	{
 		pElement = newElement;
@@ -462,18 +463,30 @@ inline const int CDataModel::GetElementIndex(const size_t hash)
 	return element->elementIndex;
 }
 
-void CDataModel::AddAttribute(CDataModelAttributeList* list, const char* name, DmAttributeType_t type, void* value)
+void CDataModel::AddAttribute(CDataModelAttributeList* pAttributes, const char* attributeName, DmAttributeType_t type, void* value)
 {
 	DmAttribute* newAttribute = new DmAttribute;
 
-	newAttribute->attributeNameStr = name;
-	newAttribute->attributeName = pStringDict()->AddToStringDict(name);
+	newAttribute->attributeNameStr = attributeName;
+	newAttribute->attributeName = pStringDict()->AddToStringDict(attributeName);
 
 	newAttribute->attributeType = type;
 
 	newAttribute->attributeValue = value;
 
-	list->pAttributes()->emplace(name, newAttribute);
+	pAttributes->pAttributes()->emplace(attributeName, newAttribute);
+}
+
+void CDataModel::EditAttribute(CDataModelAttributeList* pAttributes, const char* attributeName, DmAttributeType_t type, void* newValue)
+{
+	DmAttribute* attribute = pAttributes->GetAttribute(attributeName);
+
+	if (attribute->attributeType != type)
+	{
+		Error("New value type did not match existing type!!!");
+	}
+
+	attribute->attributeValue = newValue;
 }
 
 // write / read
