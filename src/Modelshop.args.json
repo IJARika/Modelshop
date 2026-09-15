@@ -1,0 +1,154 @@
+{
+  "FileVersion": 2,
+  "Id": "d3debe1d-b7de-4c9a-9f51-b5449aeddc00",
+  "Items": [
+    {
+      "Id": "5cc915b1-639d-4eb2-8fa5-5767770ed60b",
+      "Command": "r1",
+      "Items": [
+        {
+          "Id": "87bb321f-eed5-462d-8619-c97eba1acf86",
+          "Command": "-extract E:/development/reSource/archive/exported/r1/vpk/models/"
+        },
+        {
+          "Id": "65c2f620-da40-4807-9e5e-f57fe11dadec",
+          "Command": "-extract E:/development/reSource/archive/exported/r1o/r1/models/"
+        },
+        {
+          "Id": "23649e4b-fcd0-40a9-960a-54a5b2137b5b",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r1/"
+        },
+        {
+          "Id": "a5315e62-2bc1-4d3c-b785-e8cf0dee683c",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r1/ptpov_car101.mdl"
+        },
+        {
+          "Id": "a9f50f44-3580-4348-9a2a-e976a6cc2ff3",
+          "Command": "-outpath E:/development/reSource/file_samples/modelshop_out/r1/"
+        }
+      ]
+    },
+    {
+      "Id": "18f935b5-5c84-4a30-8c18-a74a5fad3315",
+      "Command": "r2",
+      "Items": [
+        {
+          "Id": "a9228a9c-681a-43e1-aecd-76d8bf845541",
+          "Command": "-extract E:/development/reSource/archive/exported/r2/vpk/models/weapons/"
+        },
+        {
+          "Id": "3708bb26-9f8a-4a18-8a81-52471b77d589",
+          "Command": "-extract E:/development/reSource/archive/exported/r2/vpk/models/"
+        },
+        {
+          "Id": "b884df0f-eaf6-4cc3-a2fd-29f12a22c32e",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r2/mapcoll/"
+        },
+        {
+          "Id": "97cca489-0e91-42b2-b1a3-cbebfc4f2170",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r2/"
+        },
+        {
+          "Id": "8c51cd9d-6669-45b5-9588-639f4988d561",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r2/pilot_medium_reaper_f.mdl"
+        },
+        {
+          "Id": "40c8c1a0-6530-4947-9c33-c34b5b290c01",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r2/pete_menu.mdl"
+        },
+        {
+          "Id": "b0f50348-a71e-4673-ac50-c836ac1e6ade",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r2/ptpov_doubletake.mdl"
+        },
+        {
+          "Id": "313bf09b-9a61-4ec0-8256-1bda9dbeacb8",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r2/beacon_crane_yellow.mdl"
+        },
+        {
+          "Id": "5f793abc-c130-4947-b4c8-6679952558bc",
+          "Command": "-outpath E:/development/reSource/file_samples/modelshop_out/r2/"
+        },
+        {
+          "Id": "1ba52c3d-f059-4e2f-90c6-8f621533727d",
+          "Command": "-outpath E:/development/reSource/file_samples/modelshop_out/dmx/"
+        }
+      ]
+    },
+    {
+      "Id": "d1e3325c-b317-43b9-9888-b582e86914cc",
+      "Command": "r5",
+      "Items": [
+        {
+          "Id": "d543b48a-bf31-451f-aa6e-d1f02d7dc122",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r5_000_8/doubletake/ptpov_doubletake.rmdl"
+        },
+        {
+          "Id": "3abd96cf-8856-4cee-8df2-da3eb5b404a7",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r5_010_8/ptpov_softball_at/ptpov_softball_at.rmdl"
+        },
+        {
+          "Id": "5b3b07cb-4f7c-4cb0-8bca-cbce17c4c8dc",
+          "Command": "-extract E:/development/reSource/file_samples/mdl/r5_000_8/survival_modular_flexscreens_04/survival_modular_flexscreens_04.rmdl"
+        },
+        {
+          "Id": "380973c2-8fe5-40a5-a9c5-5f287814d90a",
+          "Command": "-outpath E:/development/reSource/file_samples/modelshop_out/r5/"
+        }
+      ]
+    },
+    {
+      "Id": "eabdeaee-d3aa-43ac-a6a4-e87d5546b2f3",
+      "Command": "settings",
+      "Items": [
+        {
+          "Id": "55cfd98a-4611-4dd9-9c1d-94dc2dbb9e06",
+          "Command": " -format 1"
+        },
+        {
+          "Id": "5c709a8c-e429-4160-8ca0-042430401332",
+          "Command": "-version \"major 54 minor 8\""
+        },
+        {
+          "Id": "11118399-e400-4cad-a80f-c75b058788cc",
+          "Command": "-truncate_materials"
+        },
+        {
+          "Id": "fa7bca6e-c549-42b5-a6b2-cf7320f309ad",
+          "Command": "-ignoremotion"
+        },
+        {
+          "Id": "eb2df60d-1305-4c77-bffd-d037ec01aa29",
+          "Command": "-ignoremesh"
+        },
+        {
+          "Id": "f02150bd-7d60-443a-9161-855f0c9e4dba",
+          "Command": "-ignoreanim"
+        },
+        {
+          "Id": "1aa7f637-ee0c-4dd9-b063-f280d5aedaac",
+          "Command": "-mergeuiverts 2"
+        },
+        {
+          "Id": "76d7d35e-fc90-4b91-977b-41962b08533d",
+          "Command": "-qc_version \"49 0\""
+        },
+        {
+          "Id": "1807a062-7cc4-4a0f-a945-29d76a8c8850",
+          "Command": "-qc_write"
+        },
+        {
+          "Id": "737dc8f0-1852-4c11-b6f6-19c6931f5cac",
+          "Command": "-qc_use_includes"
+        },
+        {
+          "Id": "6642cb59-aefc-48ee-a16b-caf085b29a83",
+          "Command": "-qc_use_trim_skins"
+        },
+        {
+          "Id": "e30d1c31-9898-418b-9da4-e44a6a8fcada",
+          "Command": "-dmx_version \"encoding binary 5 format model 18\""
+        }
+      ]
+    }
+  ]
+}

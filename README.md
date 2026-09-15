@@ -13,7 +13,6 @@ Currently the tool supports:
 - building an extensive qc
 
 In the following model versions:
-- 49 (Portal 2) (NOTE: partially supported through Titanfall's legacy parsing)
 - 52 (Titanfall)
 - 53 (Titanfall 2)
 - 54 (Apex Legends) (NOTE: only mesh data for release build currently!)
@@ -24,7 +23,7 @@ For these formats:
 - SMD
 - RMAX
 
-Additional model versions are planned in the future, as well as potentially more export formats. Titanfall and Titanfall 2 are feature complete besides per-triangle collision (soon:tm:)
+Additional model versions are planned in the future, as well as potentially more export formats. Titanfall and Titanfall 2 are feature complete.
 
 # Usage
 
@@ -37,8 +36,8 @@ The following commands are valid:
 `-truncate_materials`: truncate material paths if used  
 `-upaxis`: sets the dmx up axis  
 `-ignoremotion`: does not apply motion track to root bone of animations  
-`-ignoremesh`: skip mesh data parsing  
-`-ignoreanim`: skip anim data parsing  
+`-ignoremesh`: skip mesh data exporting  
+`-ignoreanim`: skip anim data exporting  
 `-mergeuiverts`: merge down ui panel vertices more aggressively, takes numeric value  
 
 `-qc_version`: sets the target version for qc files, should be in format "%hu %hu", "%hu" works but might be undefined behaviour  

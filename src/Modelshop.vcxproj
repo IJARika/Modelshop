@@ -1,14 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -27,19 +19,6 @@
     <ProjectName>Modelshop</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -58,12 +37,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -71,53 +44,29 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <OutDir>..\bin\$(Configuration)\</OutDir>
+    <IntDir>..\build\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <OutDir>..\bin\$(Configuration)\</OutDir>
+    <IntDir>..\build\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,6 +81,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <StringPooling>true</StringPooling>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,36 +99,122 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="datamodel\cdmebase.cpp" />
-    <ClCompile Include="datamodel\cdmevertexdata.cpp" />
-    <ClCompile Include="datamodel\datamodel.cpp" />
-    <ClCompile Include="datamodel\datamodel_element.cpp" />
+    <ClCompile Include="core\math\color32.cpp" />
+    <ClCompile Include="core\math\mathlib.cpp" />
+    <ClCompile Include="core\math\matrix3x4.cpp" />
+    <ClCompile Include="core\math\vector.cpp" />
+    <ClCompile Include="core\math\vector2d.cpp" />
+    <ClCompile Include="core\math\vector4d.cpp" />
+    <ClCompile Include="core\math\vmatrix.cpp" />
+    <ClCompile Include="core\rtech\rtech_utils.cpp" />
+    <ClCompile Include="core\shareddefs.cpp" />
+    <ClCompile Include="core\threader.cpp" />
+    <ClCompile Include="core\utils\keyvalue_parser.cpp" />
+    <ClCompile Include="core\utils\strings.cpp" />
+    <ClCompile Include="core\utils\stringtable.cpp" />
+    <ClCompile Include="core\utils\utils.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="math\mathlib.cpp" />
-    <ClCompile Include="shareddefs.cpp" />
-    <ClCompile Include="studio\bone_setup.cpp" />
-    <ClCompile Include="studio\studio.cpp" />
-    <ClCompile Include="studio\studio_extract.cpp" />
+    <ClCompile Include="model\datamodel\cdmeanimationlist.cpp" />
+    <ClCompile Include="model\datamodel\cdmebase.cpp" />
+    <ClCompile Include="model\datamodel\cdmechannel.cpp" />
+    <ClCompile Include="model\datamodel\cdmechannelsclip.cpp" />
+    <ClCompile Include="model\datamodel\cdmedag.cpp" />
+    <ClCompile Include="model\datamodel\cdmefaceset.cpp" />
+    <ClCompile Include="model\datamodel\cdmejoint.cpp" />
+    <ClCompile Include="model\datamodel\cdmematerial.cpp" />
+    <ClCompile Include="model\datamodel\cdmemesh.cpp" />
+    <ClCompile Include="model\datamodel\cdmemodel.cpp" />
+    <ClCompile Include="model\datamodel\cdmequaternionlog.cpp" />
+    <ClCompile Include="model\datamodel\cdmequaternionloglayer.cpp" />
+    <ClCompile Include="model\datamodel\cdmetimeframe.cpp" />
+    <ClCompile Include="model\datamodel\cdmetransform.cpp" />
+    <ClCompile Include="model\datamodel\cdmetransformlist.cpp" />
+    <ClCompile Include="model\datamodel\cdmevector3log.cpp" />
+    <ClCompile Include="model\datamodel\cdmevector3loglayer.cpp" />
+    <ClCompile Include="model\datamodel\cdmevertexdata.cpp" />
+    <ClCompile Include="model\datamodel\datamodel.cpp" />
+    <ClCompile Include="model\internalmodel\internalmodel.cpp" />
+    <ClCompile Include="model\internalmodel\internalmodel_extract.cpp" />
+    <ClCompile Include="model\internalmodel\internalmodel_extract_qc.cpp" />
+    <ClCompile Include="model\physicsmodel\physicsmodel.cpp" />
+    <ClCompile Include="model\qc\qc.cpp" />
+    <ClCompile Include="model\rmax\rmax.cpp" />
+    <ClCompile Include="model\smd\smd.cpp" />
+    <ClCompile Include="model\studio\bone_setup.cpp" />
+    <ClCompile Include="model\studio\studio.cpp" />
+    <ClCompile Include="model\studio\studio_p2.cpp" />
+    <ClCompile Include="model\studio\studio_r1.cpp" />
+    <ClCompile Include="model\studio\studio_r2.cpp" />
+    <ClCompile Include="model\studio\studio_r5.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="datamodel\cdmebase.h" />
-    <ClInclude Include="datamodel\cdmevertexdata.h" />
-    <ClInclude Include="datamodel\datamodel.h" />
-    <ClInclude Include="datamodel\datamodel_element.h" />
-    <ClInclude Include="datamodel\datamodel_test.h" />
-    <ClInclude Include="math\compressed_vector.h" />
-    <ClInclude Include="math\mathlib.h" />
-    <ClInclude Include="math\vector.h" />
-    <ClInclude Include="math\vector2d.h" />
-    <ClInclude Include="math\vector4d.h" />
-    <ClInclude Include="math\vector64.h" />
-    <ClInclude Include="math\vector_test.h" />
-    <ClInclude Include="math\vertexcolor.h" />
-    <ClInclude Include="shareddefs.h" />
-    <ClInclude Include="studio\bone_setup.h" />
-    <ClInclude Include="studio\studio.h" />
-    <ClInclude Include="studio\studio_extract.h" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="core\cmdline.h" />
+    <ClInclude Include="core\math\color32.h" />
+    <ClInclude Include="core\math\compressed_vector.h" />
+    <ClInclude Include="core\math\float16.h" />
+    <ClInclude Include="core\math\mathlib.h" />
+    <ClInclude Include="core\math\matrix3x4.h" />
+    <ClInclude Include="core\math\vector.h" />
+    <ClInclude Include="core\math\vector2d.h" />
+    <ClInclude Include="core\math\vector4d.h" />
+    <ClInclude Include="core\math\vmatrix.h" />
+    <ClInclude Include="core\rtech\rtech_utils.h" />
+    <ClInclude Include="core\settings.h" />
+    <ClInclude Include="core\shareddefs.h" />
+    <ClInclude Include="core\threader.h" />
+    <ClInclude Include="core\utils\buffermanager.h" />
+    <ClInclude Include="core\utils\fnvhash.h" />
+    <ClInclude Include="core\utils\keyvalue_parser.h" />
+    <ClInclude Include="core\utils\strings.h" />
+    <ClInclude Include="core\utils\stringtable.h" />
+    <ClInclude Include="core\utils\textbuffer.h" />
+    <ClInclude Include="core\utils\utils.h" />
+    <ClInclude Include="model\datamodel\cdmeanimationlist.h" />
+    <ClInclude Include="model\datamodel\cdmebase.h" />
+    <ClInclude Include="model\datamodel\cdmechannel.h" />
+    <ClInclude Include="model\datamodel\cdmechannelsclip.h" />
+    <ClInclude Include="model\datamodel\cdmedag.h" />
+    <ClInclude Include="model\datamodel\cdmefaceset.h" />
+    <ClInclude Include="model\datamodel\cdmejoint.h" />
+    <ClInclude Include="model\datamodel\cdmematerial.h" />
+    <ClInclude Include="model\datamodel\cdmemesh.h" />
+    <ClInclude Include="model\datamodel\cdmemodel.h" />
+    <ClInclude Include="model\datamodel\cdmequaternionlog.h" />
+    <ClInclude Include="model\datamodel\cdmequaternionloglayer.h" />
+    <ClInclude Include="model\datamodel\cdmetimeframe.h" />
+    <ClInclude Include="model\datamodel\cdmetransform.h" />
+    <ClInclude Include="model\datamodel\cdmetransformlist.h" />
+    <ClInclude Include="model\datamodel\cdmevector3log.h" />
+    <ClInclude Include="model\datamodel\cdmevector3loglayer.h" />
+    <ClInclude Include="model\datamodel\cdmevertexdata.h" />
+    <ClInclude Include="model\datamodel\datamodel.h" />
+    <ClInclude Include="model\datamodel\datamodel_classes.h" />
+    <ClInclude Include="model\datamodel\timeutils.h" />
+    <ClInclude Include="model\internalmodel\internalmodel.h" />
+    <ClInclude Include="model\internalmodel\internalmodel_extract.h" />
+    <ClInclude Include="model\physicsmodel\physicsmodel.h" />
+    <ClInclude Include="model\qc\qc.h" />
+    <ClInclude Include="model\rmax\rmax.h" />
+    <ClInclude Include="model\smd\smd.h" />
+    <ClInclude Include="model\studio\bone_setup.h" />
+    <ClInclude Include="model\studio\optimize.h" />
+    <ClInclude Include="model\studio\phyfile.h" />
+    <ClInclude Include="model\studio\studio.h" />
+    <ClInclude Include="model\studio\studio_p2.h" />
+    <ClInclude Include="model\studio\studio_r1.h" />
+    <ClInclude Include="model\studio\studio_r2.h" />
+    <ClInclude Include="model\studio\studio_r5.h" />
+    <ClInclude Include="model\studio\studio_r5_v12.h" />
+    <ClInclude Include="model\studio\studio_r5_v16.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Modelshop.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

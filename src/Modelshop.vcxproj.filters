@@ -1,117 +1,373 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="core\shareddefs.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>pch</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\mathlib.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\vector.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\vector2d.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\vector4d.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="studio\bone_setup.cpp">
-      <Filter>Source Files\studio</Filter>
+    <ClCompile Include="model\datamodel\cdmebase.cpp">
+      <Filter>model\datamodel</Filter>
     </ClCompile>
-    <ClCompile Include="studio\studio.cpp">
-      <Filter>Source Files\studio</Filter>
+    <ClCompile Include="model\datamodel\cdmemodel.cpp">
+      <Filter>model\datamodel</Filter>
     </ClCompile>
-    <ClCompile Include="math\mathlib.cpp">
-      <Filter>Source Files\math</Filter>
+    <ClCompile Include="model\datamodel\datamodel.cpp">
+      <Filter>model\datamodel</Filter>
     </ClCompile>
-    <ClCompile Include="studio\studio_extract.cpp">
-      <Filter>Source Files\studio</Filter>
+    <ClCompile Include="model\internalmodel\internalmodel.cpp">
+      <Filter>model\internalmodel</Filter>
     </ClCompile>
-    <ClCompile Include="datamodel\datamodel.cpp">
-      <Filter>Source Files\datamodel</Filter>
+    <ClCompile Include="model\studio\bone_setup.cpp">
+      <Filter>model\studio</Filter>
     </ClCompile>
-    <ClCompile Include="datamodel\datamodel_element.cpp">
-      <Filter>Source Files\datamodel</Filter>
+    <ClCompile Include="model\studio\studio.cpp">
+      <Filter>model\studio</Filter>
     </ClCompile>
-    <ClCompile Include="shareddefs.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="model\internalmodel\internalmodel_extract.cpp">
+      <Filter>model\internalmodel</Filter>
     </ClCompile>
-    <ClCompile Include="datamodel\cdmebase.cpp">
-      <Filter>Source Files\datamodel</Filter>
+    <ClCompile Include="core\threader.cpp">
+      <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="datamodel\cdmevertexdata.cpp">
-      <Filter>Source Files\datamodel</Filter>
+    <ClCompile Include="model\studio\studio_r2.cpp">
+      <Filter>model\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="model\studio\studio_r1.cpp">
+      <Filter>model\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="model\studio\studio_r5.cpp">
+      <Filter>model\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="model\studio\studio_p2.cpp">
+      <Filter>model\studio</Filter>
+    </ClCompile>
+    <ClCompile Include="core\utils\utils.cpp">
+      <Filter>core\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="core\utils\stringtable.cpp">
+      <Filter>core\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\matrix3x4.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="model\rmax\rmax.cpp">
+      <Filter>model\rmax</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\color32.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="model\qc\qc.cpp">
+      <Filter>model\qc</Filter>
+    </ClCompile>
+    <ClCompile Include="model\smd\smd.cpp">
+      <Filter>model\smd</Filter>
+    </ClCompile>
+    <ClCompile Include="core\utils\keyvalue_parser.cpp">
+      <Filter>core\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="model\physicsmodel\physicsmodel.cpp">
+      <Filter>model\physicsmodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\internalmodel\internalmodel_extract_qc.cpp">
+      <Filter>model\internalmodel</Filter>
+    </ClCompile>
+    <ClCompile Include="core\rtech\rtech_utils.cpp">
+      <Filter>core\rtech</Filter>
+    </ClCompile>
+    <ClCompile Include="core\utils\strings.cpp">
+      <Filter>core\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmejoint.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmetransform.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmetransformlist.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmedag.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmefaceset.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmematerial.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmemesh.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmevertexdata.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmevector3log.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmevector3loglayer.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="core\math\vmatrix.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmeanimationlist.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmechannel.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmechannelsclip.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmequaternionlog.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmequaternionloglayer.cpp">
+      <Filter>model\datamodel</Filter>
+    </ClCompile>
+    <ClCompile Include="model\datamodel\cdmetimeframe.cpp">
+      <Filter>model\datamodel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="core\cmdline.h">
+      <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="math\mathlib.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="core\shareddefs.h">
+      <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="math\vector.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="pch.h">
+      <Filter>pch</Filter>
     </ClInclude>
-    <ClInclude Include="math\vector2d.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="core\math\mathlib.h">
+      <Filter>core\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\vector_test.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="core\math\vector.h">
+      <Filter>core\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\vector4d.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="core\math\vector2d.h">
+      <Filter>core\math</Filter>
     </ClInclude>
-    <ClInclude Include="math\vertexcolor.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="core\math\vector4d.h">
+      <Filter>core\math</Filter>
     </ClInclude>
-    <ClInclude Include="studio\bone_setup.h">
-      <Filter>Header Files\studio</Filter>
+    <ClInclude Include="model\datamodel\cdmebase.h">
+      <Filter>model\datamodel</Filter>
     </ClInclude>
-    <ClInclude Include="studio\studio.h">
-      <Filter>Header Files\studio</Filter>
+    <ClInclude Include="model\datamodel\cdmemodel.h">
+      <Filter>model\datamodel</Filter>
     </ClInclude>
-    <ClInclude Include="math\compressed_vector.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="model\datamodel\datamodel.h">
+      <Filter>model\datamodel</Filter>
     </ClInclude>
-    <ClInclude Include="studio\studio_extract.h">
-      <Filter>Header Files\studio</Filter>
+    <ClInclude Include="model\datamodel\timeutils.h">
+      <Filter>model\datamodel</Filter>
     </ClInclude>
-    <ClInclude Include="shareddefs.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="model\internalmodel\internalmodel.h">
+      <Filter>model\internalmodel</Filter>
     </ClInclude>
-    <ClInclude Include="math\vector64.h">
-      <Filter>Header Files\math</Filter>
+    <ClInclude Include="model\studio\bone_setup.h">
+      <Filter>model\studio</Filter>
     </ClInclude>
-    <ClInclude Include="datamodel\datamodel.h">
-      <Filter>Header Files\datamodel</Filter>
+    <ClInclude Include="model\studio\optimize.h">
+      <Filter>model\studio</Filter>
     </ClInclude>
-    <ClInclude Include="datamodel\datamodel_element.h">
-      <Filter>Header Files\datamodel</Filter>
+    <ClInclude Include="model\studio\phyfile.h">
+      <Filter>model\studio</Filter>
     </ClInclude>
-    <ClInclude Include="datamodel\datamodel_test.h">
-      <Filter>Header Files\datamodel</Filter>
+    <ClInclude Include="model\studio\studio.h">
+      <Filter>model\studio</Filter>
     </ClInclude>
-    <ClInclude Include="datamodel\cdmebase.h">
-      <Filter>Header Files\datamodel</Filter>
+    <ClInclude Include="model\internalmodel\internalmodel_extract.h">
+      <Filter>model\internalmodel</Filter>
     </ClInclude>
-    <ClInclude Include="datamodel\cdmevertexdata.h">
-      <Filter>Header Files\datamodel</Filter>
+    <ClInclude Include="core\math\float16.h">
+      <Filter>core\math</Filter>
     </ClInclude>
+    <ClInclude Include="core\math\compressed_vector.h">
+      <Filter>core\math</Filter>
+    </ClInclude>
+    <ClInclude Include="core\threader.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="model\studio\studio_r2.h">
+      <Filter>model\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="model\studio\studio_r1.h">
+      <Filter>model\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="model\studio\studio_r5.h">
+      <Filter>model\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="model\studio\studio_p2.h">
+      <Filter>model\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\stringtable.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\utils.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="model\rmax\rmax.h">
+      <Filter>model\rmax</Filter>
+    </ClInclude>
+    <ClInclude Include="core\math\matrix3x4.h">
+      <Filter>core\math</Filter>
+    </ClInclude>
+    <ClInclude Include="core\math\color32.h">
+      <Filter>core\math</Filter>
+    </ClInclude>
+    <ClInclude Include="model\qc\qc.h">
+      <Filter>model\qc</Filter>
+    </ClInclude>
+    <ClInclude Include="model\studio\studio_r5_v12.h">
+      <Filter>model\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="model\studio\studio_r5_v16.h">
+      <Filter>model\studio</Filter>
+    </ClInclude>
+    <ClInclude Include="model\smd\smd.h">
+      <Filter>model\smd</Filter>
+    </ClInclude>
+    <ClInclude Include="core\settings.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\textbuffer.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\buffermanager.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\keyvalue_parser.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="model\physicsmodel\physicsmodel.h">
+      <Filter>model\physicsmodel</Filter>
+    </ClInclude>
+    <ClInclude Include="core\rtech\rtech_utils.h">
+      <Filter>core\rtech</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\fnvhash.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="core\utils\strings.h">
+      <Filter>core\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmejoint.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmetransform.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmetransformlist.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmedag.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmefaceset.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmematerial.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmemesh.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmevertexdata.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmevector3log.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmevector3loglayer.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="core\math\vmatrix.h">
+      <Filter>core\math</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmeanimationlist.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmechannel.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmechannelsclip.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmequaternionlog.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmequaternionloglayer.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\cdmetimeframe.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="model\datamodel\datamodel_classes.h">
+      <Filter>model\datamodel</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{5a4f62e7-b80b-4726-8090-ab0cc28ecb2e}</UniqueIdentifier>
+    <Filter Include="core">
+      <UniqueIdentifier>{b768b204-4008-48f1-8eb2-52bfc02dbfb2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{88023852-4161-4b8d-8d5f-a2d393b8df2d}</UniqueIdentifier>
+    <Filter Include="pch">
+      <UniqueIdentifier>{27703d21-b1a9-4c93-a556-b0a41ab07297}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\math">
-      <UniqueIdentifier>{715954b3-3fea-41af-8798-665148378736}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\studio">
-      <UniqueIdentifier>{a209add7-8f45-4e30-9725-281c668db094}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\studio">
-      <UniqueIdentifier>{bfe98cf1-581a-4672-8332-d0c2d5a7e2f8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\math">
+    <Filter Include="core\math">
       <UniqueIdentifier>{3da7185c-3b58-4dba-b477-5e10f199f6b9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\datamodel">
-      <UniqueIdentifier>{8acb8795-d944-41c7-8c9c-118a7c2ea3b0}</UniqueIdentifier>
+    <Filter Include="model">
+      <UniqueIdentifier>{236cf961-3f9c-4f39-b61b-14e3d86f3898}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\datamodel">
+    <Filter Include="model\datamodel">
       <UniqueIdentifier>{694a51df-2ea1-4b0d-adf1-f6fa267d8109}</UniqueIdentifier>
     </Filter>
+    <Filter Include="model\internalmodel">
+      <UniqueIdentifier>{343d2529-4e55-4de3-bca4-52152b911ff7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="model\studio">
+      <UniqueIdentifier>{bfe98cf1-581a-4672-8332-d0c2d5a7e2f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\utils">
+      <UniqueIdentifier>{1bdcdf16-8ad1-49ae-ae15-9ded1a87f108}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="model\rmax">
+      <UniqueIdentifier>{8a1b3788-08e5-4016-98f4-ac5c3ab9bdce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="model\qc">
+      <UniqueIdentifier>{83d35323-3415-4b72-95c1-ab743eb7e524}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="model\smd">
+      <UniqueIdentifier>{9fcf1b6d-cbe7-43b3-b01f-f4d189b03909}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="model\physicsmodel">
+      <UniqueIdentifier>{55de2d7d-fbd5-4794-bf0a-f1e66019bbbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\rtech">
+      <UniqueIdentifier>{cb6ced68-5b1a-4181-b492-8c9b3b992120}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Modelshop.rc" />
   </ItemGroup>
 </Project>
