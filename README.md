@@ -41,7 +41,7 @@ The following commands are valid:
 `-mergeuiverts`: merge down ui panel vertices more aggressively, takes numeric value  
 
 `-qc_version`: sets the target version for qc files, should be in format "%hu %hu", "%hu" works but might be undefined behaviour  
-`-qc_write`: qc file will be exported
+`-qc_write`: qc file will be exported  
 `-qc_use_includes`: makes qc export with include (qci) files  
 `-qc_use_trim_skins`: texture group will be trimmed to only changed materials  
 
