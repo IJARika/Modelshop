@@ -51,6 +51,8 @@ enum eCmdArgs : int
 	CMD_SMD_VERSION,
 	CMD_DMX_VERSION,
 
+	CMD_HELP,
+
 	_CMD_COUNT,
 };
 
@@ -75,44 +77,90 @@ static const char* s_CommandArgs[eCmdArgs::_CMD_COUNT]
 
 	"-smd_version",			// version for the smd
 	"-dmx_version",			// dmx encoding and format
+
+	"-help",				// lists command usage
 };
 
 /*
 -extract:
 	provides a path to a model, or directory with models in them.
 -outpath:
-	provides a path to a unique output directory
+	provides a path to a unique output directory.
 -format:
-	rmax 0, dmx 1, smd 2
+	sets the desired export format with rmax 0, dmx 1, smd 2.
 -version:
-	sets the version to be used on files it cannot be determined from (apex legends)
+	sets the version to be used on files it cannot be determined from (Apex Legends).
 -truncate_materials:
-	truncate material paths if used
+	truncate material paths in exported files and qc if used.
 -upaxis:
-	sets the dmx up axis
+	sets the dmx up axis.
 -ignoremotion:
-	does not apply motion track to root bone of animations
+	does not apply motion track to root bone of animations.
 -ignoremesh:
-	skip mesh data parsing
+	skips exporting mesh data (models, phys, etc).
 -ignoreanim:
-	skip anim data parsing
+	skips exporting animation data.
 -mergeuiverts:
-	merge down ui panel vertices more aggressively
+	sets the number of passes that should be done when merging ui panel vertices, default is 0 and does a single pass.
 
 -qc_version:
-	sets the target version for qc files, should be in format "%hu %hu", "%hu" works but might be undefined behaviour
+	sets the target version for qc files, should be in format "%hu %hu", "%hu" works but might be undefined behavior.
 -qc_write:
 	qc file will be exported
 -qc_use_includes:
-	makes qc export with include (qci) files
+	makes qc export with include (qci) files.
 -qc_use_trim_skins:
-	texture group will be trimmed to only changed materials
+	texture group will be trimmed to only changed materials.
 
 -smd_version:
-	1 to 3, sets the feature set for smd
+	takes a number value of 1 to 3, sets the feature set for smd.
 -dmx_version:
-	sets the feature set and formating on dmx, this should follow exactly as what is in a dmx file header
+	sets the feature set and formating on dmx, this should follow exactly as what is in a dmx file header.
+-help:
+	prints what you're reading right now!
 */
+
+const char* const s_CmdHelp =
+{
+	"-extract:\n"
+	"\tprovides a path to a model, or directory with models in them.\n"
+	"-outpath:\n"
+	"\tprovides a path to a unique output directory.\n"
+	"-format:\n"
+	"\tsets the desired export format with rmax 0, dmx 1, smd 2.\n"
+	"-version:\n"
+	"\tsets the version to be used on files it cannot be determined from(Apex Legends).\n"
+	"-truncate_materials:\n"
+	"\ttruncate material paths in exported files and qc if used.\n"
+	"-upaxis:\n"
+	"\tsets the dmx up axis.\n"
+	"-ignoremotion:\n"
+	"\tdoes not apply motion track to root bone of animations.\n"
+	"-ignoremesh:\n"
+	"\tskips exporting mesh data (models, phys, etc).\n"
+	"-ignoreanim:\n"
+	"\tskips exporting animation data.\n"
+	"-mergeuiverts:\n"
+	"\tsets the number of passes that should be done when merging ui panel vertices, default is 0 and does a single pass.\n"
+	"\n"
+	"-qc_version:\n"
+	"\tsets the target version for qc files, should be in format \"%%hu %%hu\", \"%%hu\" works but might be undefined behavior.\n"
+	"-qc_write:\n"
+	"\tqc file(s) will be exported.\n"
+	"-qc_use_includes:\n"
+	"\tmakes qc export with include(qci) files.\n"
+	"-qc_use_trim_skins:\n"
+	"\ttexture group will be trimmed to only changed materials.\n"
+	"\t"
+	"-smd_version:\n"
+	"\ttakes a number value of 1 to 3, sets the feature set for smd.\n"
+	"-dmx_version:\n"
+	"\tsets the feature set and formating on dmx, this should follow exactly as what is in a dmx file header.\n"
+	"\n"
+	"-help:\n"
+	"\tprints what you're reading right now!\n"
+	"\n"
+};
 
 // settings from the command line
 struct CmdSettings_t

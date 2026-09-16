@@ -31,19 +31,21 @@ The following commands are valid:
 
 `-extract`: provides a path to a model, or directory with models in them.  
 `-outpath`:	provides a path to a unique output directory.  
-`-format`:	rmax 0, dmx 1, smd 2  
-`-version`:	sets the version to be used on files it cannot be determined from (Apex Legends)  
-`-truncate_materials`: truncate material paths if used  
-`-upaxis`: sets the dmx up axis  
-`-ignoremotion`: does not apply motion track to root bone of animations  
-`-ignoremesh`: skip mesh data exporting  
-`-ignoreanim`: skip anim data exporting  
-`-mergeuiverts`: merge down ui panel vertices more aggressively, takes numeric value  
+`-format`:	sets the desired export format with rmax 0, dmx 1, smd 2.  
+`-version`:	sets the version to be used on files it cannot be determined from (Apex Legends).  
+`-truncate_materials`: truncate material paths in exported files and qc if used.  
+`-upaxis`: sets the dmx up axis.  
+`-ignoremotion`: does not apply motion track to root bone of animations.  
+`-ignoremesh`: skips exporting mesh data (models, phys, etc).  
+`-ignoreanim`: skips exporting animation data.  
+`-mergeuiverts`: sets the number of passes that should be done when merging ui panel vertices, default is 0 and does a single pass.  
 
-`-qc_version`: sets the target version for qc files, should be in format "%hu %hu", "%hu" works but might be undefined behaviour  
-`-qc_write`: qc file will be exported  
-`-qc_use_includes`: makes qc export with include (qci) files  
-`-qc_use_trim_skins`: texture group will be trimmed to only changed materials  
+`-qc_version`: sets the target version for qc files, should be in format "%hu %hu", "%hu" works but might be undefined behavior.  
+`-qc_write`: qc file(s) will be exported.  
+`-qc_use_includes`: makes qc export with include (qci) files.  
+`-qc_use_trim_skins`: texture group will be trimmed to only changed materials.  
 
-`-smd_version`: 1 to 3, sets the feature set for smd  
-`-dmx_version`: sets the feature set and formating on dmx, this should follow exactly as what is in a dmx file header  
+`-smd_version`: takes a number value of 1 to 3, sets the feature set for smd.   
+`-dmx_version`: sets the feature set and formating on dmx, this should follow exactly as what is in a dmx file header.  
+
+`-help`: prints the above in console.  

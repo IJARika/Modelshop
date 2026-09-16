@@ -40,14 +40,14 @@ void ExtractStudioFile(const char* fileDir)
 		// skip if nullptr (hasn't been implemented)
 		if (!iModel)
 		{
-			Log("skipped %s because it was unimplemented.\n", path.c_str());
+			Log("skipped %s because it was an unimplemented version.\n", path.c_str());
 			continue;
 		}
 
 		// skip if faild to parse
 		if (iModel->sourceType == IModelSourceType_t::SOURCE_FAILED)
 		{
-			Log("skipped %s because it failed to parse.\n", path.c_str());
+			Log("skipped %s because it failed to parse due to invalid files.\n", path.c_str());
 			FreeAllocVar(iModel);
 			continue;
 		}
@@ -199,6 +199,11 @@ int main(int argc, char** argv)
 
 	ParseCommandSettings(cmd);
 
+	if (cmd.HasArg(s_CommandArgs[eCmdArgs::CMD_HELP]))
+	{
+		printf(s_CmdHelp);
+	}
+
 	if (cmd.HasArg(s_CommandArgs[eCmdArgs::CMD_EXTRACT]))
 	{
 		//system("pause");
@@ -207,7 +212,7 @@ int main(int argc, char** argv)
 
 		if (!inPath)
 		{
-			Error("Command '%s' used without a value, this is not the proper usage!!\n", s_CommandArgs[eCmdArgs::CMD_EXTRACT]);
+			Error("Command '%s' used without a value, requries path to model or directory containing models.\n", s_CommandArgs[eCmdArgs::CMD_EXTRACT]);
 		}
 
 		CScopeTimer funcTime("Extracting Studio File(s)");
