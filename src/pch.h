@@ -40,6 +40,7 @@
 #include <core/shareddefs.h>
 #include <core/threader.h>
 #include <core/utils/utils.h>
+#include <core/rtech/rtech_utils.h>
 #include <core/utils/stringtable.h>
 #include <core/utils/buffermanager.h>
 #include <core/utils/textbuffer.h>

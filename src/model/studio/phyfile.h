@@ -178,53 +178,56 @@ namespace irps
 {
 	struct side_t
 	{
-		char vertIndices[32];
+		uint8_t vertIndices[32];
 	};
 
 	struct edge_t
 	{
-		unsigned char vertIndices[2];
+		uint8_t vertIndices[2];
 	};
 
 	// bad very name
 	struct edge_v10_t
 	{
-		unsigned char vertIndices[2];
-		unsigned char sideIndices[2];
+		uint8_t vertIndices[2];
+		uint8_t sideIndices[2];
 	};
 
 	struct solid_t
 	{
-		float unk_0x0[3]; // first might not be float
+		float unk_0[3]; // first might not be float
 
-		float unk_0xC;
+		float unk_C;
 
 		// Vector
-		__int64 vertOffset; // 64bit for conversion into ptr
-		__int64 vertCount;
+		int64_t vertOffset; // 64bit for conversion into ptr
+		int64_t vertCount;
+		const Vector* const pVert(const void* const baseptr, const int64_t i) const { return reinterpret_cast<const Vector* const>((char*)baseptr + vertOffset) + i; }
 
 		// side or face
-		__int64 sideOffset; // 64bit for conversion into ptr
-		__int64 sideCount;
+		int64_t sideOffset; // 64bit for conversion into ptr
+		int64_t sideCount;
+		const side_t* const pSide(const void* const baseptr, const int64_t i) const { return reinterpret_cast<const side_t* const>((char*)baseptr + sideOffset) + i; }
 
-		__int64 edgeOffset; // 64bit for conversion into ptr
-		__int64 edgeCount;
+		int64_t edgeOffset; // 64bit for conversion into ptr
+		int64_t edgeCount;
 	};
 
 	struct solidgroup_t
 	{
-		__int64 solidOffset; // 64bit for conversion into ptr
-		__int64 solidCount;
+		int64_t solidOffset; // 64bit for conversion into ptr
+		int64_t solidCount;
+		const solid_t* const pSolid(const void* const baseptr, const int64_t i) const { return reinterpret_cast<const solid_t* const>((char*)baseptr + solidOffset) + i; }
 
-		float unk_0x10; // scale?? weird
+		float unk_10; // scale?? weird
 
-		int unk_0x14[3];
+		int unk_14[3];
 
 		// idx 0, and 4 match the floats in solid_t
 		struct {
-			float unk0x0[3];
-			int unk_0xC;
-		} unk_0x20[5]; // weird
+			float unk_0[3];
+			int unk_C;
+		} unk_20[5]; // weird
 
 		// differs slightly from model but should be the mostly same assuming it is one solid.
 		// this is PER SOLID so on multi-solid phys this will be smaller than the models
@@ -237,10 +240,11 @@ namespace irps
 	struct phyptrheader_t
 	{
 		// these are actually all 32 bit ints but with 4 extra bytes per to convert into pointers
-		__int64 solidOffset;	// offset into surfaces
-		__int64 solidCount;		// Number of solids in file
-		__int64 unk_0x8;
-		__int64 solidSize;		// size of all surfaces
+		int64_t solidOffset;	// offset into surfaces
+		int64_t solidCount;		// Number of solids in file
+		int64_t unk_8;
+		int64_t solidSize;		// size of all surfaces
+		const solidgroup_t* const pSolidGroup(const int64_t i) const { return reinterpret_cast<const solidgroup_t* const>((char*)this + solidOffset) + i; }
 	};
 
 	struct phyheader_t
@@ -249,14 +253,23 @@ namespace irps
 		int id;			// 0 for valve, 1 for apex's new type
 		int solidCount;	// number of surface headers
 		int checkSum;	// checksum of source .mdl file
+		inline const phyptrheader_t* const pPtrHeader() const { return reinterpret_cast<const phyptrheader_t* const>((char*)this + size); }
 
 		int propertiesOffset;	// string block or size of data after this member
+		inline const char* const pszProperties() const { return reinterpret_cast<const char* const>(this) + propertiesOffset; }
 	};
+
+#ifndef FIX_OFFSET
+#define FIX_OFFSET(offset) static_cast<int>(static_cast<int>(offset & 0xFFFE) << (4 * (offset & 1))) // arithmetic overflow
+#endif // !FIX_OFFSET
 
 	// how to handle versions for this
 	struct phyheader_v16_t
 	{
-		unsigned short solidCount;			// number of surface headers
-		unsigned short propertiesOffset;	// string block or size of data after this member
+		uint16_t solidCount;			// number of surface headers
+		uint16_t propertiesOffset;	// string block or size of data after this member
+		inline const char* const pszProperties() const { return reinterpret_cast<const char* const>(this) + FIX_OFFSET(propertiesOffset); }
+
+		inline const phyptrheader_t* const pPtrHeader() const { return reinterpret_cast<const phyptrheader_t* const>(&this[1]); }
 	};
 }

@@ -286,6 +286,48 @@ namespace PhysicsModel
 		solids = new Solid[solidCount]{};
 
 		const char* properties = pPHYS->pszProperties();
+
+		ParseProperties(properties); // parse properties string at EOF
+		ParseDefaults(); // parse our extracted values to find default values
+		ParseFeatures(); // set flags on solids for the features that are used		
+
+		// todo: surface parsing if needed?
+	}
+
+	CParsedPhys::CParsedPhys(const irps::phyheader_t* const pPHYS) : solids(nullptr), solidCount(pPHYS->solidCount), maxConvexPieces(0), concavePerJoint(false), isJointedCollision(true), collisionRule(nullptr), animatedFricton(nullptr), editParams(nullptr), collisionText(nullptr),
+		defaultInertia(s_defaultInertia), defaultDamping(s_defaultDamping), defaultRotDamping(s_defaultRotDamping), defaultParamUsage(PHYSPARAM_FLAG_HAS_NONE)
+	{
+		assertm(solidCount, "physics with no solid");
+
+		solids = new Solid[solidCount]{};
+
+		const char* properties = pPHYS->pszProperties();
+
+		ParseProperties(properties); // parse properties string at EOF
+		ParseDefaults(); // parse our extracted values to find default values
+		ParseFeatures(); // set flags on solids for the features that are used		
+
+		// todo: surface parsing if needed?
+	}
+
+	CParsedPhys::CParsedPhys(const irps::phyheader_v16_t* const pPHYS) : solids(nullptr), solidCount(pPHYS->solidCount), maxConvexPieces(0), concavePerJoint(false), isJointedCollision(true), collisionRule(nullptr), animatedFricton(nullptr), editParams(nullptr), collisionText(nullptr),
+		defaultInertia(s_defaultInertia), defaultDamping(s_defaultDamping), defaultRotDamping(s_defaultRotDamping), defaultParamUsage(PHYSPARAM_FLAG_HAS_NONE)
+	{
+		assertm(solidCount, "physics with no solid");
+
+		solids = new Solid[solidCount]{};
+
+		const char* properties = pPHYS->pszProperties();
+
+		ParseProperties(properties); // parse properties string at EOF
+		ParseDefaults(); // parse our extracted values to find default values
+		ParseFeatures(); // set flags on solids for the features that are used		
+
+		// todo: surface parsing if needed?
+	}
+
+	void CParsedPhys::ParseProperties(const char* properties)
+	{
 		while (properties[0])
 		{
 			kv_parser::Token_t parsedParam(&properties, kv_parser::TOKEN_KEY);
@@ -307,7 +349,7 @@ namespace PhysicsModel
 
 				// discard ragdoll constraints without a parent (-1)
 				const int child = parsedConstraint.GetChild();
-				if (child < 0 || child >= pPHYS->solidCount)
+				if (child < 0 || child >= solidCount)
 				{
 					continue;
 				}
@@ -344,7 +386,10 @@ namespace PhysicsModel
 		}
 
 		assertm(editParams, "physics should have editparams");
+	}
 
+	void CParsedPhys::ParseDefaults()
+	{
 		// default params
 		if (solidCount == 1)
 		{
@@ -386,7 +431,10 @@ namespace PhysicsModel
 
 			FreeAllocArray(buf);
 		}
+	}
 
+	void CParsedPhys::ParseFeatures()
+	{
 		// cycle through solids and remove flags for ones matching the default values
 		for (int i = 0; i < solidCount; i++)
 		{
@@ -427,7 +475,5 @@ namespace PhysicsModel
 		{
 			defaultParamUsage |= PHYSPARAM_FLAG_HAS_ROTDAMPING;
 		}
-
-		// todo: surface parsing if needed?
 	}
 }

@@ -1276,7 +1276,18 @@ const bool IModelExporter::ExportQC()
 	// check if we need $maxverts command
 	// todo: doesn't seem quite right to add here
 	qcMaxVerts++;
-	assertm(qcMaxVerts < MAXSTUDIOVERTS, "invalid max vert value");
+	if (qcMaxVerts >= MAXSTUDIOVERTS)
+	{
+		if (imodel->GetSourceVersion().major == STUDIO_VERSION_APEX_LEGENDS)
+		{
+			Log("model '%s' had files with a lot of vertices!\n", imodel->GetName());
+		}
+		else
+		{
+			assertm(false, "invalid max vert value");
+		}		
+	}
+
 	if (qcMaxVerts > (MAXSTUDIOVERTS / 3))
 	{
 		CmdParse(&qcFile, QC_MAXVERTS, &qcMaxVerts);

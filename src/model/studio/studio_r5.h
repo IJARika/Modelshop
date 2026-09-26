@@ -34,7 +34,8 @@ V18 (s23.1 to R5pc_r5-250_J41_CL9194250_EX9275033_2025_06_05_11_52): nointerpfra
 V19 (R5pc_r5-251_J15_CL9347583_2025_06_13_15_48 to R5pc_r5-260_J40_CL9779662_2025_08_19_16_52): added datapoint animations, model version changed but not sequence
 V19.1 (R5pc_r5-261_J15_CL9878594_2025_09_05_15_37 to R5pc_r5-281_J49_CL10880617_2026_04_07_15_27): animindex removed from mstudioanimdesc_t, as a result any non external animation tracks are stored in a new asset, 'asqd' which stores shared anim data.
 v19.2 (R5pc_r5-290_J29_CL10970277_2026_04_24_15_33 to R5pc_r5-291_J84_CL11262393_2026_07_02_15_15): adds support for 1024 bones, hardware data weight structs adjusted, fields added to studiohdr for per lod bonestates
-v19.3 (R5pc_r5-300_J23_CL11375875_2026_07_29_15_44 to retail): see animseq v13
+v19.3 (R5pc_r5-300_J23_CL11375875_2026_07_29_15_44 to R5pc_r5-300_J57_CL11457258_2026_08_19_15_40): see animseq v13
+v20 (R5pc_r5-301_J20_CL11528440_FSv30_1_2026_09_04_16_06 to retail): see animseq v14
 */
 
 /*
@@ -54,7 +55,8 @@ V10 (R5pc_r5-90_J135_CL1006802_2021_04_23_20_19 to s14): event struct has a new 
 V11 (R5pc_r5-150_J26_CL3438947_2022_10_27_16_21 to s23): model overhaul
 V12 (s23.1 to R5pc_r5-260_J40_CL9779662_2025_08_19_16_52): nointerpframes added, adjusts how the float value 's' is calculated
 V12.1 (R5pc_r5-261_J15_CL9878594_2025_09_05_15_37 to R5pc_r5-291_J84_CL11262393_2026_07_02_15_15): animindex removed from mstudioanimdesc_t, as a result any non external animation tracks are stored in a new asset, 'asqd' which stores shared anim data.
-v13 (R5pc_r5-300_J23_CL11375875_2026_07_29_15_44 to retail): bone flag array uses six bits instead of four, for additional (unknown) flags
+v13 (R5pc_r5-300_J23_CL11375875_2026_07_29_15_44 to R5pc_r5-300_J57_CL11457258_2026_08_19_15_40): bone flag array uses six bits instead of four, for additional (unknown) flags
+v14 (R5pc_r5-301_J20_CL11528440_FSv30_1_2026_09_04_16_06 to retail): added a var to mstudio_nointerpframes_t that is an offset to an array of 's' float values per bone, added a flag 0x1000000 to animdesc flags that when set adds four bytes of currently unknown data before the flag array
 */
 
 #pragma pack(push, 4) // required for quite a few structs
@@ -261,6 +263,8 @@ namespace r5
 	#define BONE_HAS_SAVEFRAME_ROT64	0x00400000	// Quaternion64
 	#define BONE_HAS_SAVEFRAME_ROT32	0x00800000	// Quaternion32
 	#define BONE_FLAG_UNK_1000000		0x01000000	// where?
+
+	#define BONE_FLAG_UNK_40000000		0x40000000 // used in CalcAnimation
 
 	struct mstudiobone_t
 	{
@@ -552,17 +556,17 @@ namespace r5
 	#define ANIM_BONEFLAG_BITS_4			4 // a nibble even
 	#define ANIM_BONEFLAG_SIZE_4(count)		(IALIGN2((ANIM_BONEFLAG_BITS_4 * count + 7) / 8)) // size in bytes of the bone flag array. pads 7 bits for truncation, then align to 2 bytes
 	#define ANIM_BONEFLAG_SHIFT_4(idx)		(ANIM_BONEFLAG_BITS_4 * (idx % 2)) // return four (bits) if this index is odd, as there are four bits per bone
-	#define ANIM_BONEFLAGS_FLAG_4(ptr, idx)	(static_cast<uint8_t>(ptr[idx / 2] >> ANIM_BONEFLAG_SHIFT_4(idx)) & r5::RleBoneFlags_t::STUDIO_ANIM_MASK_RELEASE) // get byte offset, then shift if needed, mask to four bits
+	#define ANIM_BONEFLAG_FLAG_4(ptr, idx)	(static_cast<uint8_t>(ptr[idx / 2] >> ANIM_BONEFLAG_SHIFT_4(idx)) & r5::RleBoneFlags_t::STUDIO_ANIM_MASK_RELEASE) // get byte offset, then shift if needed, mask to four bits
 
 	// starting in season 30 we have six bits for bone flags
 	#define ANIM_BONEFLAG_BITS_6			6 // a morsel ?
 	#define ANIM_BONEFLAG_SIZE_6(count)		(IALIGN2((ANIM_BONEFLAG_BITS_6 * count + 7) / 8))	// size in bytes of the bone flag array. pads 7 bits for truncation, then align to 2 bytes !!! TBD if this works the same !!!
 	#define ANIM_BONEFLAG_SHIFT_6(idx)		(ANIM_BONEFLAG_BITS_6 * (idx % 4))					// return four (bits) if this index is odd, as there are four bits per bone
 		//#define ANIM_BONEFLAGS_FLAG_6(ptr, idx)	(static_cast<uint8_t>(*reinterpret_cast<const uint32_t* const>(ptr + ((idx / 4) * 3)) >> ANIM_BONEFLAG_SHIFT_6(idx)) & r5::RleBoneFlags_t::STUDIO_ANIM_MASK_RETAIL) // get byte offset, then shift if needed, mask to four bits
-	#define ANIM_BONEFLAGS_FLAG_6(ptr, idx, bits, mask)	(((static_cast<uint8_t>(ptr[bits >> 3]) | (static_cast<uint8_t>(ptr[(bits >> 3) + 1]) << 8)) >> (bits & 7)) & mask) // get byte offset, then shift if needed, mask to four bits
+	#define ANIM_BONEFLAG_FLAG_6(ptr, idx, bits, mask)	(((static_cast<uint8_t>(ptr[bits >> 3]) | (static_cast<uint8_t>(ptr[(bits >> 3) + 1]) << 8)) >> (bits & 7)) & mask) // get byte offset, then shift if needed, mask to four bits
 
 	#define ANIM_BONEFLAG_SIZE(count, width) (width == ANIM_BONEFLAG_BITS_6 ? ANIM_BONEFLAG_SIZE_6(count) : ANIM_BONEFLAG_SIZE_4(count)) 
-	#define ANIM_BONEFLAGS_FLAG(ptr, idx, width, bits) (width == ANIM_BONEFLAG_BITS_6 ? ANIM_BONEFLAGS_FLAG_6(ptr, idx, bits, r5::RleBoneFlags_t::STUDIO_ANIM_MASK_RETAIL) : ANIM_BONEFLAGS_FLAG_4(ptr, idx)) 
+	#define ANIM_BONEFLAG_FLAG(ptr, idx, width, bits) (width == ANIM_BONEFLAG_BITS_6 ? ANIM_BONEFLAG_FLAG_6(ptr, idx, bits, r5::RleBoneFlags_t::STUDIO_ANIM_MASK_RETAIL) : ANIM_BONEFLAG_FLAG_4(ptr, idx)) 
 
 	struct mstudio_rle_anim_t
 	{
@@ -672,7 +676,7 @@ namespace r5
 	#define STUDIO_AUTOPLAY		0x0008		// temporary flag that forces the sequence to always play
 	#define STUDIO_POST			0x0010		// 
 	#define STUDIO_ALLZEROS		0x0020		// this animation/sequence has no real animation data
-	#define STUDIO_ANIM_UNK40	0x0040		// suppgest ?
+	#define STUDIO_SUPPGEST		0x0040		// suppgest ?
 	#define STUDIO_CYCLEPOSE	0x0080		// cycle index is taken from a pose parameter index
 	#define STUDIO_REALTIME		0x0100		// cycle index is taken from a real-time clock, not the animations cycle index
 	#define STUDIO_LOCAL		0x0200		// sequence has a local context sequence
@@ -689,6 +693,7 @@ namespace r5
 	#define STUDIO_SINGLE_FRAME		0x80000 // this animation/sequence only has one frame of animation data
 	#define STUDIO_ANIM_UNK100000	0x100000	// reactive animations? seemingly only used on sequences for reactive skins, speicifcally the idle sequence
 	#define STUDIO_DATAPOINTANIM	0x200000	// animation uses a packing method which adjusts off of framepoints
+	#define STUDIO_ANIM_UNK1000000	0x1000000	// if set skips four bytes in front of the flag array
 
 	struct mstudioanimdesc_t
 	{
@@ -1195,6 +1200,9 @@ namespace r5
 		int localnodenameindex;
 		int localNodeUnk;			// used sparsely in r2, unused in apex, removed in v16 rmdl
 		int localNodeDataOffset;	// offset into an array of int sized offsets that read into the data for each node (note: bad name, this should be named something different to reflect it being a new node storage type)
+		inline const char* const pszLocalNodeName(const int iNode) const { return reinterpret_cast<const char* const>((char*)this + reinterpret_cast<const int* const>((char*)this + localnodenameindex)[iNode]); }
+		inline const uint8_t* const pLocalTransition(const int i) const { return reinterpret_cast<const uint8_t* const>((char*)this + localnodeindex) + i; }
+		// insert new node style
 
 		int meshOffset; // hard offset to the start of this models meshes
 

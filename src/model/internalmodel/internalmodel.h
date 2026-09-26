@@ -33,6 +33,7 @@ struct IModelSourceVersion_t
 
 		assertm(result, "invalid format");
 	}
+	IModelSourceVersion_t(const int versionMajor, const int versionMinor) : major(versionMajor), minor(versionMinor) {};
 
 	int major;
 	int minor;
@@ -123,6 +124,7 @@ public:
 	IModelIKLock() = default;
 	IModelIKLock(const r1::mstudioiklock_t* const pIKLock) : chain(pIKLock->chain), flPosWeight(pIKLock->flPosWeight), flLocalQWeight(pIKLock->flLocalQWeight), flags(pIKLock->flags) {}
 	IModelIKLock(const r2::mstudioiklock_t* const pIKLock) : chain(pIKLock->chain), flPosWeight(pIKLock->flPosWeight), flLocalQWeight(pIKLock->flLocalQWeight), flags(pIKLock->flags) {}
+	IModelIKLock(const r5::mstudioiklock_t* const pIKLock) : chain(pIKLock->chain), flPosWeight(pIKLock->flPosWeight), flLocalQWeight(pIKLock->flLocalQWeight), flags(pIKLock->flags) {}
 
 	inline const uint32_t GetChain() const { return chain; }
 	inline const float GetPosWeight() const { return flPosWeight; }
@@ -141,6 +143,7 @@ public:
 	IModelIKLink() = default;
 	IModelIKLink(const r1::mstudioiklink_t* const pIKLink) : bone(pIKLink->bone), kneeDir(pIKLink->kneeDir) {}
 	IModelIKLink(const r2::mstudioiklink_t* const pIKLink) : bone(pIKLink->bone), kneeDir(pIKLink->kneeDir) {}
+	IModelIKLink(const r5::mstudioiklink_t* const pIKLink) : bone(pIKLink->bone), kneeDir(pIKLink->kneeDir) {}
 
 	inline const int GetBone() const { return bone; }
 	inline const Vector* const GetKneeDir() const { return &kneeDir; }
@@ -165,6 +168,16 @@ public:
 		links[IKLINK_FOOT] = IModelIKLink(pIKChain->pLink(IKLINK_FOOT));
 	}
 	IModelIKChain(const r2::mstudioikchain_t* const pIKChain) : name(nullptr), unk(pIKChain->unk_10)
+	{
+		assertm(pIKChain->numlinks == IKLINK_COUNT, "invalid ik chain");
+
+		name = AllocStudioString(pIKChain->pszName());
+
+		links[IKLINK_THIGH] = IModelIKLink(pIKChain->pLink(IKLINK_THIGH));
+		links[IKLINK_KNEE] = IModelIKLink(pIKChain->pLink(IKLINK_KNEE));
+		links[IKLINK_FOOT] = IModelIKLink(pIKChain->pLink(IKLINK_FOOT));
+	}
+	IModelIKChain(const r5::mstudioikchain_t* const pIKChain) : name(nullptr), unk(pIKChain->unk_10)
 	{
 		assertm(pIKChain->numlinks == IKLINK_COUNT, "invalid ik chain");
 
@@ -323,7 +336,7 @@ public:
 		// todo
 		if (pIKRule->compressedikerrorindex)
 		{
-			//assertm(false, "not implemented");
+			assertm(false, "not implemented");
 		}
 
 		if (pIKRule->ikerrorindex)
@@ -347,7 +360,31 @@ public:
 		// todo
 		if (pIKRule->compressedikerrorindex)
 		{
-			//assertm(false, "not implemented");
+			assertm(false, "not implemented");
+		}
+
+		if (pIKRule->ikerrorindex)
+		{
+			assertm(false, "not implemented");
+		}
+	}
+	IModelIKRule(const r5::mstudioikrule_t* const pIKRule) : attachment(nullptr), compressedikerror(nullptr), ikerror(nullptr), index(pIKRule->index), type(pIKRule->type), chain(pIKRule->chain), bone(pIKRule->bone), slot(pIKRule->slot),
+		height(pIKRule->height), radius(pIKRule->radius), floor(pIKRule->floor), pos(pIKRule->pos), q(pIKRule->q),
+		iStart(pIKRule->iStart), start(pIKRule->start), peak(pIKRule->peak), tail(pIKRule->tail), end(pIKRule->end), contact(pIKRule->contact), drop(pIKRule->drop), top(pIKRule->top), endHeight(pIKRule->endHeight)
+	{
+		assertm(drop == 0.0f, "drop was used");
+		assertm(top == 0.0f, "top was used");
+
+		const char* const pszAttachment = pIKRule->pszAttachment();
+		if (pszAttachment)
+		{
+			attachment = AllocStudioString(pszAttachment);
+		}
+
+		// todo
+		if (pIKRule->compressedikerrorindex)
+		{
+			assertm(false, "not implemented");
 		}
 
 		if (pIKRule->ikerrorindex)
@@ -455,6 +492,7 @@ public:
 	IModelMovement() = default;
 	IModelMovement(const r1::mstudiomovement_t* const pMovement) : endframe(pMovement->endframe), motionflags(pMovement->motionflags), v0(pMovement->v0), v1(pMovement->v1), angle(pMovement->angle), vector(pMovement->vector), position(pMovement->position) {}
 	IModelMovement(const r2::mstudiomovement_t* const pMovement) : endframe(pMovement->endframe), motionflags(pMovement->motionflags), v0(pMovement->v0), v1(pMovement->v1), angle(pMovement->angle), vector(pMovement->vector), position(pMovement->position) {}
+	IModelMovement(const r5::mstudiomovement_t* const pMovement) : endframe(pMovement->endframe), motionflags(pMovement->motionflags), v0(pMovement->v0), v1(pMovement->v1), angle(pMovement->angle), vector(pMovement->vector), position(pMovement->position) {}
 
 	inline const int GetEndFrame() const { return endframe; }
 	inline const int GetMotionFlags() const { return motionflags; }
@@ -481,6 +519,22 @@ public:
 	{
 		memcpy_s(scale, sizeof(scale), pFrameMovement->scale, sizeof(pFrameMovement->scale));
 		memcpy_s(offset, sizeof(offset), pFrameMovement->offset, sizeof(pFrameMovement->offset));
+	}
+	IModelFrameMovement(const r5::mstudioframemovement_t* const pFrameMovement, const int numFrames) : sectionCount(pFrameMovement->SectionCount(numFrames)), sectionFrames(pFrameMovement->sectionframes), sections(nullptr)
+	{
+		memcpy_s(scale, sizeof(scale), pFrameMovement->scale, sizeof(pFrameMovement->scale));
+
+		assertm(sectionCount > 0, "should have at least one section");
+		//sections = new int[sectionCount] {};
+	}
+	~IModelFrameMovement()
+	{
+		if (sectionCount == 0)
+		{
+			return;
+		}
+
+		FreeAllocArray(sections);
 	}
 
 private:
@@ -541,6 +595,7 @@ public:
 	IModelAnimation() = default;
 	IModelAnimation(const r1::studiohdr_t* const pHdr, const r1::mstudioanimdesc_t* const pAnimDesc, const StudioLooseData_t* const looseData);
 	IModelAnimation(const r2::studiohdr_t* const pHdr, const r2::mstudioanimdesc_t* const pAnimDesc);
+	IModelAnimation(const IModel* const imodel, const r5::mstudioanimdesc_t* const pAnimDesc);
 	~IModelAnimation();
 
 	inline const char* const GetName() const { return name + IsSeqDeclared(); }
@@ -612,15 +667,15 @@ private:
 
 	IModelAnimFlags_t flags;
 
-	int movementCount;
-	IModelMovement* movements;
 	IModelFrameMovement* framemovement;
-	
-	IModelIKRule* ikRules;
-	int ikRuleCount;
+	IModelMovement* movements;
+	int movementCount;
 
-	int localHierarchyCount;
+	int ikRuleCount;
+	IModelIKRule* ikRules;
+
 	void* localHierarchies;
+	int localHierarchyCount;
 
 	int sectionFrames;		// max frames per section
 	int sectionStallFrames;
@@ -668,6 +723,7 @@ public:
 	IModelEvent() = default;
 	IModelEvent(const r1::mstudioevent_t* const pEvent);
 	IModelEvent(const r2::mstudioevent_t* const pEvent);
+	IModelEvent(const r5::mstudioevent_t* const pEvent);
 	IModelEvent(const IModelEvent& eventIn);
 	~IModelEvent();
 
@@ -713,6 +769,7 @@ public:
 	IModelActMod() = default;
 	IModelActMod(const r1::mstudioactivitymodifier_t* const pActMod);
 	IModelActMod(const r2::mstudioactivitymodifier_t* const pActMod);
+	IModelActMod(const r5::mstudioactivitymodifier_t* const pActMod);
 	IModelActMod(const IModelActMod& actModIn);
 	~IModelActMod();
 
@@ -746,6 +803,8 @@ public:
 		start(pAutoLayer->start), peak(pAutoLayer->peak), tail(pAutoLayer->tail), end(pAutoLayer->end) {};
 	IModelAutoLayer(const r2::mstudioautolayer_t* const pAutoLayer) : sequence(0ull), iSequence(pAutoLayer->iSequence), iPose(pAutoLayer->iPose), flags(pAutoLayer->flags),
 		start(pAutoLayer->start), peak(pAutoLayer->peak), tail(pAutoLayer->tail), end(pAutoLayer->end) {};
+	IModelAutoLayer(const r5::mstudioautolayer_t* const pAutoLayer) : sequence(pAutoLayer->sequence), iSequence(0), iPose(static_cast<int16_t>(pAutoLayer->iPose)), flags(pAutoLayer->flags),
+		start(pAutoLayer->start), peak(pAutoLayer->peak), tail(pAutoLayer->tail), end(pAutoLayer->end) {};
 	~IModelAutoLayer() {};
 
 	inline const int GetSequenceIndex() const { return iSequence; }
@@ -776,6 +835,7 @@ public:
 	IModelSequence() = default;
 	IModelSequence(const r1::studiohdr_t* const pHdr, const r1::mstudioseqdesc_t* const pSeqDesc);
 	IModelSequence(const r2::studiohdr_t* const pHdr, const r2::mstudioseqdesc_t* const pSeqDesc);
+	IModelSequence(IModel* const imodel, const r5::mstudioseqdesc_t* const pSeqDesc, const std::unordered_map<uint64_t, uint32_t>* const animationIds);
 	~IModelSequence();
 
 	IModelSequence& operator=(const IModelSequence&& seq) = delete;
@@ -941,6 +1001,7 @@ public:
 	IModelPoseParameter() = default;
 	IModelPoseParameter(const r1::mstudioposeparamdesc_t* const pPoseParam) : name(AllocStudioString(pPoseParam->pszName())), flags(pPoseParam->flags), start(pPoseParam->start), end(pPoseParam->end), loop(pPoseParam->loop) {}
 	IModelPoseParameter(const r2::mstudioposeparamdesc_t* const pPoseParam) : name(AllocStudioString(pPoseParam->pszName())), flags(pPoseParam->flags), start(pPoseParam->start), end(pPoseParam->end), loop(pPoseParam->loop) {}
+	IModelPoseParameter(const r5::mstudioposeparamdesc_t* const pPoseParam) : name(AllocStudioString(pPoseParam->pszName())), flags(pPoseParam->flags), start(pPoseParam->start), end(pPoseParam->end), loop(pPoseParam->loop) {}
 
 	~IModelPoseParameter()
 	{
@@ -985,6 +1046,10 @@ public:
 		assertm(pModelGroup->szlabelindex == 0, "model had label");
 	}
 	IModelModelGroup(const r2::mstudiomodelgroup_t* const pModelGroup) : label(nullptr), name(AllocStudioString(pModelGroup->pszName()))
+	{
+		assertm(pModelGroup->szlabelindex == 0, "model had label");
+	}
+	IModelModelGroup(const r5::mstudiomodelgroup_t* const pModelGroup) : label(nullptr), name(AllocStudioString(pModelGroup->pszName()))
 	{
 		assertm(pModelGroup->szlabelindex == 0, "model had label");
 	}
@@ -1313,6 +1378,8 @@ enum eIModelMeshFlags : IModelMeshFlags_t
 
 constexpr IModelMeshFlags_t IMODEL_defaultMeshFlags_VTX = (IMODELMESH_FLAG_POS | IMODELMESH_FLAG_NORM | IMODELMESH_FLAG_TAN | IMODELMESH_FLAG_WEIGHTS | IMODELMESH_FLAG_TEXCOORD0);
 
+const eIModelMeshFlags GetPolyFlag(const IModelFaceIndice numIndices);
+
 class IModelMeshData
 {
 public:
@@ -1405,6 +1472,7 @@ public:
 	IModelMesh(const uint32_t lodIndex, const IModelSourceFlags_t sourceFlags, const r2::mstudiomesh_t* const pStudioMesh, const OptimizedModel::MeshHeader_t* const pVertexMesh, const StudioLooseData_t* const pLooseData);
 	IModelMesh(const uint32_t lodIndex, const IModelSourceFlags_t sourceFlags, const r5::mstudiomesh_t* const pStudioMesh, const OptimizedModel::MeshHeader_t* const pVertexMesh, const StudioLooseData_t* const pLooseData);
 	IModelMesh(const IModel* const imodel, IModelPhysics* const physics, const ivps::phyheader_t* const pPHYS);
+	IModelMesh(const IModel* const imodel, IModelPhysics* const physics, const irps::phyptrheader_t* const pPtrHdr);
 	IModelMesh(const IModel* const imodel, IModelMapCollision* const collision);
 	IModelMesh(const IModel* const imodel, IModelPerTriAABB* const perTriAABB);
 	IModelMesh(const IModel* const imodel, const r2::UIPanelMesh_s* const pUIMesh);
@@ -1564,6 +1632,7 @@ public:
 	IModelModel(const IModelLOD* const lod, const IModelSourceFlags_t sourceFlags, const r5::mstudiomodel_t* const pStudioModel, const OptimizedModel::ModelLODHeader_t* const pVertexLOD,
 		const StudioLooseData_t* const pLooseData, const char* const modelName, const char* const bodypartName, const bool hasLODs);
 	IModelModel(const IModel* const imodel, IModelPhysics* const physics, const ivps::phyheader_t* const pPHYS);
+	IModelModel(const IModel* const imodel, IModelPhysics* const physics, const irps::phyptrheader_t* const pPtrHdr);
 	IModelModel(const IModel* const imodel, IModelMapCollision* const collision);
 	IModelModel(const IModel* const imodel, IModelPerTriAABB* const perTriAABB);
 	IModelModel(const IModel* const imodel, const r2::UIPanelHeader_s* const pUIPanel);
@@ -1617,6 +1686,8 @@ private:
 	// per vertex
 	uint16_t maxVertWeights;
 	uint16_t maxVertTexcoords;
+
+	void CreateNameForPhysics(const IModel* const imodel, IModelPhysics* const physics);
 };
 
 // for lod
@@ -1760,18 +1831,22 @@ class IModelPhysics : public IModelModel
 {
 public:
 	IModelPhysics(const IModel* const imodel, const ivps::phyheader_t* const pPHYS);
+	IModelPhysics(const IModel* const imodel, const irps::phyheader_t* const pPHYS);
+	IModelPhysics(const IModel* const imodel, const irps::phyheader_v16_t* const pPHYS);
 	~IModelPhysics()
 	{
 
 	}	
 
 	inline const PhysicsModel::CParsedPhys* const GetParsedPhys() const { return &parsedPhysics; }
-	inline void SetJointed(const bool hasJoints) { parsedPhysics.SetJointed(hasJoints); }
+	//inline void SetJointed(const bool hasJoints) { parsedPhysics.SetJointed(hasJoints); }
 	inline void SetConcavePerJoint() { parsedPhysics.SetConcavePerJoint(); }
 	inline void SetMaxConvexPieces(const int16_t numPieces) { parsedPhysics.SetMaxConvexPieces(numPieces); }
 
 private:
 	PhysicsModel::CParsedPhys parsedPhysics;
+
+	void CheckIfJointed(const IModel* const imodel);
 };
 
 class IModelMapCollisionSide
@@ -1797,27 +1872,6 @@ public:
 
 	const uint8_t GetVertexCount() const { return vertCount; }
 	const uint8_t GetVertexIndice(const uint8_t i) const { return vertIndices[i]; }
-
-	const eIModelMeshFlags GetFaceType() const
-	{
-		assertm(vertCount > 2, "that's an edge not a side");
-
-		switch (vertCount)
-		{
-		case 3:
-		{
-			return eIModelMeshFlags::IMODELMESH_FLAG_TRI;
-		}
-		case 4:
-		{
-			return eIModelMeshFlags::IMODELMESH_FLAG_QUAD;
-		}
-		default:
-		{
-			return eIModelMeshFlags::IMODELMESH_FLAG_NGON;
-		}
-		}
-	}
 
 	friend class IModelMapCollisionShape;
 
@@ -2212,6 +2266,8 @@ public:
 	const eProcBoneType GetProcType() const { return procType; }
 	template<typename ProcBone> __forceinline ProcBone* const GetProcBone() const { return reinterpret_cast<ProcBone* const>(procBone.generic); }
 
+	inline const int GetPhysicsBone() const { return physicsbone; }
+
 	inline const uint16_t GetCollIndex() const { return collisionIndex; }
 	inline const uint16_t GetCollCount() const { return collisionCount; }
 
@@ -2529,6 +2585,16 @@ public:
 	IModelSourceFlags_t sourceFlags; // eIModelFlags (should match studio hdr flags)
 	IModelSourceType_t sourceType;
 	inline const IModelSourceFlags_t GetFlags() const { return sourceFlags; }
+	const IModelSourceVersion_t GetSourceVersion() const
+	{
+		if (sourceType != IModelSourceType_t::SOURCE_STUDIO)
+		{
+			assertm(false, "fix this if we get there");
+			return IModelSourceVersion_t(-1, -1);
+		}
+
+		return IModelSourceVersion_t(source.pStudioSource->version, source.pStudioSource->version_minor);
+	}
 
 	// studio data
 	char namedebug[64]; // The internal name of the model, padding with null chars. this can differ from the szName
@@ -2562,8 +2628,15 @@ public:
 		for (index = 0; index < boneCount; index++)
 		{
 			const int success = strncmp(bones[index].GetName(), bone, nameLength);
-			if (success == 0)
-				break;
+
+			if (success)
+				continue;
+
+			// the bone only containted a substring, ex 'def_l_elbow' getting caught on 'def_l_elbowB'
+			if (bones[index].GetName()[nameLength])
+				continue;
+
+			break;
 		}
 
 		if (index == boneCount)
@@ -2579,11 +2652,13 @@ public:
 	inline const uint32_t GetHitboxSetCount() const { return hitboxSetCount; }
 
 	IModelAnimation* animations;
-	uint32_t animationCount;
+	uint16_t animationCount;
+	uint16_t localAnimationCount;
 	inline const IModelAnimation* const GetAnimation(const uint32_t index) const { return animationCount > index ? animations + index : nullptr; }
 	inline const uint32_t GetAnimationCount() const { return animationCount; }
 
-	uint32_t sequenceCount;
+	uint16_t sequenceCount;
+	uint16_t localSequenceCount;
 	IModelSequence* sequences;
 	inline const IModelSequence* const GetSequence(const uint32_t index) const { return sequences + index; }
 	inline const uint32_t GetSequenceCount() const { return sequenceCount; }

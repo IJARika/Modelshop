@@ -39,6 +39,7 @@ namespace r2
 
 	constexpr size_t maxUIPanelVerts = 256;
 	constexpr size_t maxUIPanelFaces = 64;
+	constexpr size_t maxUIPanelCCW = 32;
 
 	struct UIPanelMesh_s
 	{
@@ -51,8 +52,8 @@ namespace r2
 		int indiceOffset;	// offsets into a vertex map for each face
 		int boundsOffset;	// offset into bounds section for parsing the vertices
 
-		uint32_t indiceWindingBF; // use CCW winding if (indiceWindingBF & (1 << faceIdx)), limits face count to 32
-		inline const bool IsCCW(const int i) const { return (indiceWindingBF & (1 << i)); }
+		uint32_t indiceWindingBF; // use CCW winding if (indiceWindingBF & (1 << faceIdx)), limits CCW face count to 32
+		inline const bool IsCCW(const int i) const { return maxUIPanelCCW > i ? (indiceWindingBF & (1 << i)) : false; }
 
 		inline const short* const pParent(const int i) const { return reinterpret_cast<short*>((char*)this + parentOffset) + i; }
 		inline const short Parent(const int i) const { return *pParent(i); }

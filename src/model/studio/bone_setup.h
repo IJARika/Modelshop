@@ -56,6 +56,8 @@ namespace r5
 	void CalcBonePosition(int frame, float s, const mstudio_rle_anim_t* panim, Vector& pos);
 	void CalcBoneScale(int frame, float s, const mstudio_rle_anim_t* panim, Vector& scale, const char boneFlags);
 
+	bool Studio_AnimPosition(const mstudioanimdesc_t* const panim, float flCycle, Vector& vecPos, QAngle& vecAngle);
+
 //#pragma pack(push, 2)
 //	namespace v8
 //	{

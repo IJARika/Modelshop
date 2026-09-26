@@ -274,6 +274,8 @@ namespace PhysicsModel
 	{
 	public:
 		CParsedPhys(const ivps::phyheader_t* const pPHYS);
+		CParsedPhys(const irps::phyheader_t* const pPHYS);
+		CParsedPhys(const irps::phyheader_v16_t* const pPHYS);
 		~CParsedPhys()
 		{
 			FreeAllocArray(solids);
@@ -324,5 +326,9 @@ namespace PhysicsModel
 		float defaultDamping;
 		float defaultRotDamping;
 		ParamFlags_t defaultParamUsage; // if one of these is set, custom data is used
+
+		void ParseProperties(const char* properties);
+		void ParseDefaults();
+		void ParseFeatures();
 	};
 }

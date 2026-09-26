@@ -577,6 +577,194 @@ IModelAnimation::IModelAnimation(const r2::studiohdr_t* const pHdr, const r2::ms
 	}
 }
 
+IModelAnimation::IModelAnimation(const IModel* const imodel, const r5::mstudioanimdesc_t* const pAnimDesc) : frameCount(pAnimDesc->numframes), frameRate(pAnimDesc->fps), flags(IMODELANIM_FLAG_NONE),
+	movementCount(pAnimDesc->nummovements), movements(nullptr), framemovement(nullptr), ikRuleCount(pAnimDesc->numikrules), ikRules(nullptr), localHierarchyCount(0), localHierarchies(nullptr),
+	sectionFrames(pAnimDesc->sectionframes), sectionStallFrames(0), sectionCount(0), localSectionCount(0), zeroFrameSpan(0), zeroFrameCount(0),
+
+	animTracks(nullptr), movementTrack(nullptr), animTrackCount(imodel->GetBoneCount())
+{
+	name = AllocStudioString(pAnimDesc->pszName());
+
+	constexpr int maskAjustedFlags = ~(STUDIO_SUPPGEST | STUDIO_HAS_ANIM | STUDIO_ANIM_UNK100000);
+	flags |= (pAnimDesc->flags & maskAjustedFlags);
+
+	// on animdesc this flag is for HAS_ANIM on sequence it is for HAS_SCALE
+	if (pAnimDesc->flags & STUDIO_HAS_ANIM)
+	{
+		flags |= eIModelAnimFlags::IMODELANIM_FLAG_HAS_ANIM;
+	}
+
+	// previously used for STUDIO_FRAMEANIM
+	if (pAnimDesc->flags & STUDIO_SUPPGEST)
+	{
+		flags |= eIModelAnimFlags::IMODELANIM_FLAG_SUPPGEST;
+	}
+
+	// previously used for STUDIO_BPANIM
+	if (pAnimDesc->flags & STUDIO_ANIM_UNK100000)
+	{
+		flags |= eIModelAnimFlags::IMODELANIM_FLAG_UNK100000;
+	}
+
+	// set up tracks for parsing
+	animTracks = new IModelAnimationTrack[animTrackCount]{};
+
+	for (int track = 0; track < animTrackCount; track++)
+	{
+		animTracks[track].Init(GetFrameCount(), track, imodel->GetBone(track)->GetName());
+	}
+
+	// parse movements
+	if (movementCount)
+	{
+		flags |= eIModelAnimFlags::IMODELANIM_FLAG_MOVEMENTTRACK;
+		movementTrack = new IModelMovementTrack(GetFrameCount());
+		
+		movements = new IModelMovement[movementCount]{};
+		for (int i = 0; i < pAnimDesc->nummovements; i++)
+		{
+			movements[i] = IModelMovement(pAnimDesc->pMovement(i));
+		}
+	}
+
+	if (flags & IMODELANIM_FLAG_FRAMEMOVEMENT)
+	{
+		flags |= eIModelAnimFlags::IMODELANIM_FLAG_MOVEMENTTRACK;
+		movementTrack = new IModelMovementTrack(GetFrameCount());
+
+		framemovement = new IModelFrameMovement(pAnimDesc->pFrameMovement(), pAnimDesc->numframes);
+	}
+
+	if (ikRuleCount)
+	{
+		ikRules = new IModelIKRule[ikRuleCount]{};
+
+		for (int i = 0; i < pAnimDesc->numikrules; i++)
+		{
+			ikRules[i] = IModelIKRule(pAnimDesc->pIKRule(i));
+		}
+	}
+
+	if (sectionFrames)
+	{
+		sectionCount = static_cast<int16_t>(SectionCount());
+		localSectionCount = sectionCount;
+	}
+
+	// parse out animation data
+	// for this version of apex this is fine, later versions have 1024 bones
+	Vector positions[256]{};
+	Quaternion quats[256]{};
+	Vector scales[256]{};
+	RadianEuler rotations[256]{};
+
+	const int numBones = static_cast<int>(imodel->GetBoneCount());
+
+	// normally done per frame but due to how we work, it's not needed here
+	if (flags & IMODELANIM_FLAG_DELTA)
+	{
+		for (int i = 0; i < numBones; i++)
+		{
+			positions[i].Init(0.0f, 0.0f, 0.0f);
+			quats[i].Init(0.0f, 0.0f, 0.0f, 1.0f);
+			scales[i].Init(1.0f, 1.0f, 1.0f);
+			rotations[i].Init(0.0f, 0.0f, 0.0f);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < numBones; i++)
+		{
+			const IModelBone* const bone = imodel->GetBone(i);
+
+			positions[i] = bone->GetPos();
+			quats[i] = bone->GetQuat();
+			scales[i] = bone->GetScale();
+			rotations[i] = bone->GetRot();
+		}
+	}
+
+	static_assert(static_cast<uint16_t>(r5::RleBoneFlags_t::STUDIO_ANIM_POS) == static_cast<uint16_t>(eIModelAnimTrackFlags::TRACK_POS));
+	static_assert(static_cast<uint16_t>(r5::RleBoneFlags_t::STUDIO_ANIM_ROT) == static_cast<uint16_t>(eIModelAnimTrackFlags::TRACK_ROT));
+	static_assert(static_cast<uint16_t>(r5::RleBoneFlags_t::STUDIO_ANIM_SCALE) == static_cast<uint16_t>(eIModelAnimTrackFlags::TRACK_SCL));
+
+	if (flags & eIModelAnimFlags::IMODELANIM_FLAG_HAS_ANIM)
+	{
+		for (int frame = 0; frame < GetFrameCount(); frame++)
+		{
+			const float cycle = GetCycle(frame);
+
+			const float fFrame = cycle * static_cast<float>(pAnimDesc->numframes - 1);
+
+			const int iFrame = static_cast<int>(fFrame);
+			const float s = (fFrame - static_cast<float>(iFrame));
+
+			int iLocalFrame = iFrame;
+
+			const uint8_t* const pflags = reinterpret_cast<const uint8_t* const>(pAnimDesc->pAnimdata(&iLocalFrame));
+			const r5::mstudio_rle_anim_t* panim = reinterpret_cast<const r5::mstudio_rle_anim_t* const>(pflags + ANIM_BONEFLAG_SIZE_4(numBones));
+
+			for (int bone = 0; bone < numBones; bone++)
+			{
+				Vector pos(positions[bone]);
+				Quaternion q(quats[bone]);
+				Vector scale(scales[bone]);
+				RadianEuler baseRot(rotations[bone]);
+
+				const uint8_t boneFlags = ANIM_BONEFLAG_FLAG_4(pflags, bone); // truncate byte offset then shift if needed
+
+				animTracks[bone].SetFlags(boneFlags & r5::RleBoneFlags_t::STUDIO_ANIM_DATA);
+
+				if (boneFlags & (r5::RleBoneFlags_t::STUDIO_ANIM_DATA)) // check if this bone has data
+				{
+					if (boneFlags & r5::RleBoneFlags_t::STUDIO_ANIM_POS)
+						CalcBonePosition(iLocalFrame, s, panim, pos);
+					if (boneFlags & r5::RleBoneFlags_t::STUDIO_ANIM_ROT)
+						CalcBoneQuaternion(iLocalFrame, s, panim, baseRot, q, boneFlags);
+					if (boneFlags & r5::RleBoneFlags_t::STUDIO_ANIM_SCALE)
+						CalcBoneScale(iLocalFrame, s, panim, scale, boneFlags);
+
+					panim = panim->pNext();
+				}
+
+				animTracks[bone].AddFrame(frame, pos, q, scale);
+			}
+
+			if (movementTrack)
+			{
+				Vector pos;
+				QAngle rot;
+
+				// above comment about interpolated values
+				r5::Studio_AnimPosition(pAnimDesc, cycle, pos, rot);
+
+				movementTrack->AddFrame(frame, pos, rot);
+			}
+		}
+	}
+	else
+	{
+		for (int frame = 0; frame < GetFrameCount(); frame++)
+		{
+			for (int bone = 0; bone < numBones; bone++)
+			{
+				animTracks[bone].AddFrame(frame, positions[bone], quats[bone], scales[bone]);
+			}
+
+			if (movementTrack)
+			{
+				Vector pos;
+				QAngle rot;
+
+				// above comment about interpolated values
+				r5::Studio_AnimPosition(pAnimDesc, GetCycle(frame), pos, rot);
+
+				movementTrack->AddFrame(frame, pos, rot);
+			}
+		}
+	}
+}
+
 IModelAnimation::~IModelAnimation()
 {
 	FreeAllocArray(name);
@@ -588,6 +776,15 @@ IModelAnimation::~IModelAnimation()
 
 	FreeAllocArray(animTracks);
 	FreeAllocVar(movementTrack);
+}
+
+template<typename AnimDesc>
+const uint64_t GetUniqueAnimationID(const AnimDesc* const anim)
+{
+	char tmp[MAX_PATH]{};
+	snprintf(tmp, MAX_PATH, "%s_fps_%f_flags_%x_rules_%i\0", anim->pszName(), anim->fps, anim->flags, anim->numikrules);
+
+	return RTech::StringToGuid(tmp);
 }
 
 
@@ -603,6 +800,12 @@ IModelEvent::IModelEvent(const r1::mstudioevent_t* const pEvent) : cycle(pEvent-
 }
 
 IModelEvent::IModelEvent(const r2::mstudioevent_t* const pEvent) : cycle(pEvent->cycle), unk(0.0f), event(pEvent->event), type(pEvent->type)
+{
+	name = AllocStudioString(pEvent->pszEvent());
+	options = AllocStudioString(pEvent->options, 64);
+}
+
+IModelEvent::IModelEvent(const r5::mstudioevent_t* const pEvent) : cycle(pEvent->cycle), unk(0.0f), event(pEvent->event), type(pEvent->type)
 {
 	name = AllocStudioString(pEvent->pszEvent());
 	options = AllocStudioString(pEvent->options, 64);
@@ -627,6 +830,12 @@ IModelActMod::IModelActMod(const r1::mstudioactivitymodifier_t* const pActMod) :
 }
 
 IModelActMod::IModelActMod(const r2::mstudioactivitymodifier_t* const pActMod) : negate(pActMod->negate)
+{
+	name = AllocStudioString(pActMod->pszName());
+}
+
+
+IModelActMod::IModelActMod(const r5::mstudioactivitymodifier_t* const pActMod) : negate(pActMod->negate)
 {
 	name = AllocStudioString(pActMod->pszName());
 }
@@ -760,6 +969,114 @@ IModelSequence::IModelSequence(const r2::studiohdr_t* const pHdr, const r2::mstu
 	if (blendCount)
 	{
 		blends = AllocStudioBuffer(pSeqDesc->pAnimIndex(0), pSeqDesc->AnimCount());
+	}
+
+	// init some arrays
+	groupSize[0] = pSeqDesc->groupsize[0];
+	groupSize[1] = pSeqDesc->groupsize[1];
+	paramIndex[0] = pSeqDesc->paramindex[0];
+	paramIndex[1] = pSeqDesc->paramindex[1];
+	paramStart[0] = pSeqDesc->paramstart[0];
+	paramStart[1] = pSeqDesc->paramstart[1];
+	paramEnd[0] = pSeqDesc->paramend[0];
+	paramEnd[1] = pSeqDesc->paramend[1];
+
+	if (autoLayerCount)
+	{
+		autoLayers = new IModelAutoLayer[autoLayerCount]{};
+
+		for (int i = 0; i < pSeqDesc->numautolayers; i++)
+		{
+			autoLayers[i] = IModelAutoLayer(pSeqDesc->pAutoLayer(i));
+		}
+	}
+
+	assertm(pSeqDesc->weightlistindex, "sequence should have a weight list");
+	weights = AllocStudioBuffer(pSeqDesc->pBoneweight(0), weightCount);
+
+	if (pSeqDesc->posekeyindex)
+	{
+		poseKeys = AllocStudioBuffer(pSeqDesc->pPoseKey(0, 0), pSeqDesc->groupsize[0] + pSeqDesc->groupsize[1]);
+	}
+
+	if (ikLockCount)
+	{
+		assertm(false, "sequence had iklocks!");
+
+		ikLocks = new IModelIKLock[ikLockCount]{};
+
+		for (int i = 0; i < pSeqDesc->numiklocks; i++)
+		{
+			ikLocks[i] = IModelIKLock(pSeqDesc->pIKLock(i));
+		}
+	}
+
+	if (pSeqDesc->keyvaluesize && pSeqDesc->keyvalueindex)
+	{
+		keyvalues = AllocStudioString(pSeqDesc->pKeyValues(), static_cast<size_t>(pSeqDesc->keyvaluesize));
+	}
+
+	if (activityModifierCount)
+	{
+		activityModifiers = new IModelActMod[activityModifierCount]{};
+
+		for (int i = 0; i < pSeqDesc->numactivitymodifiers; i++)
+		{
+			activityModifiers[i] = IModelActMod(pSeqDesc->pActivityModifier(i));
+		}
+	}
+}
+
+IModelSequence::IModelSequence(IModel* const imodel, const r5::mstudioseqdesc_t* const pSeqDesc, const std::unordered_map<uint64_t, uint32_t>* const animationIds) : flags(IMODELANIM_FLAG_NONE), actWeight(pSeqDesc->actweight), bbmin(pSeqDesc->bbmin), bbmax(pSeqDesc->bbmax),
+	events(nullptr), eventCount(pSeqDesc->numevents), blends(nullptr), blendCount(pSeqDesc->numblends),
+	paramParent(pSeqDesc->paramparent), fadeInTime(pSeqDesc->fadeintime), fadeOutTime(pSeqDesc->fadeouttime), localEntryNode(pSeqDesc->localentrynode), localExitNode(pSeqDesc->localexitnode), nodeFlags(pSeqDesc->nodeflags),
+	entryPhase(pSeqDesc->entryphase), exitPhase(pSeqDesc->exitphase), lastFrame(pSeqDesc->lastframe), nextSeq(pSeqDesc->nextseq), pose(pSeqDesc->pose),
+	ikRuleCount(pSeqDesc->numikrules), autoLayers(nullptr), autoLayerCount(pSeqDesc->numautolayers), weights(nullptr), weightCount(static_cast<int>(imodel->GetBoneCount())), poseKeys(nullptr), ikLocks(nullptr), ikLockCount(pSeqDesc->numiklocks),
+	keyvalues(nullptr), activityModifiers(nullptr), activityModifierCount(pSeqDesc->numactivitymodifiers), 
+	cyclePoseIndex(pSeqDesc->cycleposeindex), ikResetMask(pSeqDesc->ikResetMask), unk(pSeqDesc->unk_C4)
+{
+	label = AllocStudioString(pSeqDesc->pszLabel());
+	activity = AllocStudioString(pSeqDesc->pszActivityName());
+
+	flags |= pSeqDesc->flags;
+
+	//assertm(pSeqDesc->AnimCount() == pSeqDesc->numblends, "blend count mismatch");
+	if (blendCount == 0)
+	{
+		blendCount = pSeqDesc->groupsize[0] * pSeqDesc->groupsize[1];
+	}
+
+	if (eventCount)
+	{
+		events = new IModelEvent[eventCount]{};
+
+		for (int i = 0; i < pSeqDesc->numevents; i++)
+		{
+			events[i] = IModelEvent(pSeqDesc->pEvent<r5::mstudioevent_t>(i));
+		}
+	}
+
+	if (blendCount)
+	{
+		blends = new int16_t[blendCount]{};
+
+		for (int i = 0; i < blendCount; i++)
+		{
+			const r5::mstudioanimdesc_t* const pAnimDesc = pSeqDesc->pAnimDesc<r5::mstudioanimdesc_t>(i);
+			const uint64_t guid = GetUniqueAnimationID(pAnimDesc);
+
+			const bool exists = animationIds->contains(guid);
+			assertm(exists, "parsing is wicked stoove up");
+
+			if (exists == false)
+			{
+				blends[i] = 0;
+				
+				continue;
+			}
+
+			blends[i] = static_cast<int16_t>(animationIds->at(guid));
+		}
 	}
 
 	// init some arrays
@@ -1049,6 +1366,32 @@ void IModelVertex::ParseFromIVPS(IModelVertex* const vertex, IModelMesh* const m
 // Model Mesh Data
 //
 
+const eIModelMeshFlags GetPolyFlag(const IModelFaceIndice numIndices)
+{
+	switch (numIndices)
+	{
+	case 0:
+	case 1:
+	case 2:
+	{
+		assertm(false, "bad indice count");
+		return eIModelMeshFlags::IMODELMESH_FLAG_NONE;
+	}
+	case 3:
+	{
+		return eIModelMeshFlags::IMODELMESH_FLAG_TRI;
+	}
+	case 4:
+	{
+		return eIModelMeshFlags::IMODELMESH_FLAG_QUAD;
+	}
+	default:
+	{
+		return eIModelMeshFlags::IMODELMESH_FLAG_NGON;
+	}
+	}
+}
+
 IModelMeshData::IModelMeshData(const uint32_t vertexCount, const uint32_t indiceCount, const uint16_t weightsPerVertex, const uint16_t texcoordsPerVertex, const bool useVertexColor, char* tempBuf = nullptr) : buffer(nullptr), vertices(nullptr), indices(nullptr), triangles(nullptr),
 	weights(nullptr), texcoords(nullptr), colors(nullptr)
 {
@@ -1203,6 +1546,92 @@ IModelMesh::IModelMesh(const IModel* const imodel, IModelPhysics* const physics,
 	g_BufferManager.RelieveBuffer(meshBuf);
 }
 
+IModelMesh::IModelMesh(const IModel* const imodel, IModelPhysics* const physics, const irps::phyptrheader_t* const pPtrHdr) : flags(IMODELMESH_FLAG_NONE), material(IMODELTEXTURE_PHYSICS),
+	data(nullptr), vertexCount(0u), indiceCount(0u), triangleCount(0u), weightCount(0u), texcoordCount(0u), maxWeightsPerVert(1u), meshid(0), center(0.0f)
+{
+	using namespace PhysicsModel;
+
+	flags |= (IMODELMESH_FLAG_POS | IMODELMESH_FLAG_WEIGHTS);
+
+	CManagedBuffer* const meshBuf = g_BufferManager.ClaimBuffer();
+	data = new IModelMeshData(MAXSTUDIOVERTS, MAXSTUDIOTRIANGLES, maxWeightsPerVert, texcoordCount, false, meshBuf->Buffer());
+
+	const CParsedPhys* const parsedPhys = physics->GetParsedPhys();
+
+	int64_t parsedSolidGroups = 0;
+	int64_t parsedSolids = 0;
+	for (int64_t i = 0; i < pPtrHdr->solidCount; i++)
+	{
+		const Solid* const solid = parsedPhys->GetSolid(static_cast<int>(i));
+		const irps::solidgroup_t* const pSolidGroup = pPtrHdr->pSolidGroup(i);
+
+		const uint32_t boneIndex = imodel->GetBoneIndex(solid->GetName());
+		const uint32_t resolvedBoneIndex = boneIndex > imodel->GetBoneCount() ? 0 : boneIndex;
+
+		matrix3x4_t matrix;
+		MatrixInvert(*imodel->GetBone(resolvedBoneIndex)->GetPoseToBone(), matrix);
+
+		const IModelVertexBoneWeight weight(static_cast<int>(i), 1.0f);
+		IModelFaceIndice indices[32]{};
+
+		for (int64_t solidIdx = 0; solidIdx < pSolidGroup->solidCount; solidIdx++)
+		{
+			const irps::solid_t* const pSolid = pSolidGroup->pSolid(pPtrHdr, solidIdx);
+
+			const IModelFaceIndice vertexIndex = vertexCount;
+
+			for (int64_t vertIdx = 0; vertIdx < pSolid->vertCount; vertIdx++)
+			{
+				const Vector* const pos = pSolid->pVert(pPtrHdr, vertIdx);
+
+				Vector out;
+				VectorTransform(pos->Base(), matrix, out.Base());
+
+				AddVertex(&out, &weight);
+			}
+
+			for (int64_t sideIdx = 0; sideIdx < pSolid->sideCount; sideIdx++)
+			{
+				const irps::side_t* const pSide = pSolid->pSide(pPtrHdr, sideIdx);
+
+				IModelFaceIndice numIndices = 0;
+				for (; numIndices < 32;)
+				{
+					// out of vertices!
+					if (pSide->vertIndices[numIndices] == 0xFF)
+					{
+						break;
+					}
+
+					indices[numIndices] = vertexIndex + pSide->vertIndices[numIndices];
+					numIndices++;
+				}
+
+				const IModelFace face(numIndices, indices);
+				AddIndice(face);
+
+				flags |= GetPolyFlag(face.GetIndiceCount());
+			}
+		}
+
+		parsedSolidGroups++;
+		parsedSolids += pSolidGroup->solidCount;
+	}
+
+	assertm(parsedSolidGroups == pPtrHdr->solidCount, "solids not completely parsed");
+
+	physics->SetMaxConvexPieces(static_cast<int16_t>(parsedSolids));
+	physics->SetConcavePerJoint();
+
+	assertm(MAXSTUDIOVERTS >= vertexCount, "mesh had too many vertices");
+	assertm(MAXSTUDIOTRIANGLES >= indiceCount, "mesh had too many triangles"); // number of tris (numIndices / 3)
+
+	GenerateNormals();
+
+	ShrinkData();
+	g_BufferManager.RelieveBuffer(meshBuf);
+}
+
 IModelMesh::IModelMesh(const IModel* const imodel, IModelMapCollision* const collision) : flags(IMODELMESH_FLAG_NONE), material(IMODELTEXTURE_PHYSICS),
 	data(nullptr), vertexCount(0u), indiceCount(0u), triangleCount(0u), weightCount(0u), texcoordCount(0u), maxWeightsPerVert(1u), meshid(0), center(0.0f)
 {
@@ -1242,7 +1671,7 @@ IModelMesh::IModelMesh(const IModel* const imodel, IModelMapCollision* const col
 			if (side->GetVertexCount() == 0)
 				continue;
 
-			flags |= side->GetFaceType();
+			flags |= GetPolyFlag(side->GetVertexCount());
 
 			IModelFaceIndice indices[IMODELFACE_maxIndices]{};
 
@@ -2036,36 +2465,32 @@ IModelModel::IModelModel(const IModelLOD* const lod, const IModelSourceFlags_t s
 
 IModelModel::IModelModel(const IModel* const imodel, IModelPhysics* const physics, const ivps::phyheader_t* const pPHYS) : name(nullptr), unknown(nullptr),
 	type(-1), boundingradius(0.0f), meshes(nullptr), meshCount(1u), vertexCount(0u), indiceCount(0u), weightCount(0u), maxVertWeights(0u), maxVertTexcoords(0u)
-{	
-	// static prop saves name (note: this is probably just '$collisionmodel' in general)
-	const char* const firstSolidName = physics->GetParsedPhys()->GetSolid(0)->GetName();
-	if (imodel->GetBoneIndex(firstSolidName) >= imodel->GetBoneCount())
-	{
-		assertm(physics->GetParsedPhys()->GetSolidCount() == 1, "jointed model with invalid bones");
-
-		name = AllocStudioString(firstSolidName);
-
-		// model used '$collisionmodel'
-		physics->SetJointed(false);
-	}
+{
 	// form a name
-	else
-	{
-		constexpr size_t bufferSize = 64ull;
-		char tmp[bufferSize]{};
-
-		strncpy_s(tmp, bufferSize, keepAfterLastSlashOrBackslash(imodel->GetName()), bufferSize);
-		removeExtension(tmp);
-
-		snprintf(tmp, bufferSize, "%s_phys", tmp);
-		name = AllocStudioString(tmp);
-
-		// model used '$collisionjoints'
-		physics->SetJointed(true);
-	}
+	CreateNameForPhysics(imodel, physics);
 
 	meshes = new IModelMesh[meshCount]{};
 	meshes[0u] = IModelMesh(imodel, physics, pPHYS);
+
+	// set data from mesh
+	const IModelMesh* const mesh = meshes;
+
+	vertexCount = mesh->GetVertexCount();
+	indiceCount = mesh->GetIndiceCount();
+	weightCount = mesh->GetWeightCount();
+
+	maxVertWeights = mesh->GetMaxVertBoneCount();
+	maxVertTexcoords = mesh->GetTexcoordCount();
+}
+
+IModelModel::IModelModel(const IModel* const imodel, IModelPhysics* const physics, const irps::phyptrheader_t* const pPtrHdr) : name(nullptr), unknown(nullptr),
+	type(-1), boundingradius(0.0f), meshes(nullptr), meshCount(1u), vertexCount(0u), indiceCount(0u), weightCount(0u), maxVertWeights(0u), maxVertTexcoords(0u)
+{	
+	// form a name
+	CreateNameForPhysics(imodel, physics);
+
+	meshes = new IModelMesh[meshCount]{};
+	meshes[0u] = IModelMesh(imodel, physics, pPtrHdr);
 
 	// set data from mesh
 	const IModelMesh* const mesh = meshes;
@@ -2194,6 +2619,29 @@ IModelModel::~IModelModel()
 {
 	FreeAllocArray(name);
 	FreeAllocArray(meshes);
+}
+
+void IModelModel::CreateNameForPhysics(const IModel* const imodel, IModelPhysics* const physics)
+{
+	if (physics->GetParsedPhys()->IsJointed())
+	{
+		constexpr size_t bufferSize = 64ull;
+		char tmp[bufferSize]{};
+
+		strncpy_s(tmp, bufferSize, keepAfterLastSlashOrBackslash(imodel->GetName()), bufferSize);
+		removeExtension(tmp);
+
+		snprintf(tmp, bufferSize, "%s_phys", tmp);
+		name = AllocStudioString(tmp);
+	}
+	else
+	{
+		assertm(physics->GetParsedPhys()->GetSolidCount() == 1, "jointed model with invalid bones");
+
+		// static prop saves name (note: this is probably just '$collisionmodel' in general)
+		const char* const firstSolidName = physics->GetParsedPhys()->GetSolid(0)->GetName();
+		name = AllocStudioString(firstSolidName);
+	}
 }
 
 IModelLOD::IModelLOD(const uint32_t lodIndex, const uint16_t numModels, const IModelSourceFlags_t sourceFlags, const r1::studiohdr_t* const pHdr, const StudioLooseData_t* const pLooseData) :
@@ -2380,13 +2828,51 @@ IModelPhysics::IModelPhysics(const IModel* const imodel, const ivps::phyheader_t
 	*static_cast<IModelModel*>(this) = IModelModel(imodel, this, pPHYS);
 }
 
+IModelPhysics::IModelPhysics(const IModel* const imodel, const irps::phyheader_t* const pPHYS) : parsedPhysics(pPHYS)
+{
+	const irps::phyptrheader_t* const pPtrHdr = pPHYS->pPtrHeader();
+
+	assertm(pPHYS->solidCount == pPHYS->pPtrHeader()->solidCount, "solid count did not matche between headers");
+
+	// if we don't do this, the constructor will get called before physics is parsed
+	// calling IModelModel() also does not work, so we use this hack ;p
+	*static_cast<IModelModel*>(this) = IModelModel(imodel, this, pPtrHdr);
+}
+
+IModelPhysics::IModelPhysics(const IModel* const imodel, const irps::phyheader_v16_t* const pPHYS) : parsedPhysics(pPHYS)
+{
+	const irps::phyptrheader_t* const pPtrHdr = pPHYS->pPtrHeader();
+
+	assertm(pPHYS->solidCount == pPHYS->pPtrHeader()->solidCount, "solid count did not matche between headers");
+
+	// if we don't do this, the constructor will get called before physics is parsed
+	// calling IModelModel() also does not work, so we use this hack ;p
+	*static_cast<IModelModel*>(this) = IModelModel(imodel, this, pPtrHdr);
+}
+
+// will set as jointed if model is jointed
+void IModelPhysics::CheckIfJointed(const IModel* const imodel)
+{
+	const char* const firstSolidName = GetParsedPhys()->GetSolid(0)->GetName();
+	if (imodel->GetBoneIndex(firstSolidName) >= imodel->GetBoneCount())
+	{
+		assertm(GetParsedPhys()->GetSolidCount() == 1, "jointed model with invalid bones");
+
+		// model used '$collisionmodel'
+		parsedPhysics.SetJointed(false);
+	}
+	else
+	{
+		// model used '$collisionjoints'
+		parsedPhysics.SetJointed(true);
+	}
+}
+
 IModelMapCollisionSide::IModelMapCollisionSide(const r2::mstudiocollside_t* const pCollFace) : normal(pCollFace->normal), normalScale(pCollFace->normalScale), edgeCount(0u), vertCount(0u)
 {
 	memset(edgeIndices, 0xff, sizeof(edgeIndices));
 	memset(vertIndices, 0xff, sizeof(vertIndices));
 }
-
-
 
 IModelMapCollisionShape::IModelMapCollisionShape(const r2::mstudiocollhdr_t* const pCollHdr, const uint32_t bone) : sides(nullptr), edges(nullptr), vertices(nullptr), sideCount(static_cast<int16_t>(pCollHdr->sideCount)), sideAndQuirkyCount(static_cast<int16_t>(pCollHdr->sideAndUnkCount)),
 	edgeCount(static_cast<int16_t>(pCollHdr->edgeCount)), vertCount(static_cast<int16_t>(pCollHdr->vertCount)), parent(bone)
@@ -3110,11 +3596,11 @@ IModel::IModel(const std::filesystem::path path, const r1::studiohdr_t* const pH
 	textures(nullptr), textureCount(0u), cdTextures(nullptr), cdTexturesCount(0u), skins(nullptr), skinCount(0u),
 
 	// animation
-	animations(nullptr), animationCount(0u), sequences(nullptr), sequenceCount(0u), localNodeNames(nullptr), localNodeCount(0u), ikChains(nullptr), ikChainCount(0u),
+	animations(nullptr), animationCount(0u), localAnimationCount(0u), sequences(nullptr), sequenceCount(0u), localSequenceCount(0u), localNodeNames(nullptr), localNodeCount(0u), ikChains(nullptr), ikChainCount(0u),
 	localPoseParameters(nullptr), localPoseParameterCount(0u), localIkAutoPlayLocks(nullptr), localIkAutoPlayLockCount(0u), includeModels(nullptr), includeModelCount(0u), animBlockName(nullptr), animBlocks(nullptr), animBlockCount(0u),
 
 	// collision
-	physics(nullptr), mapCollision(nullptr)
+	physics(nullptr), mapCollision(nullptr), perTriAABB(nullptr)
 {
 	// get loose files
 	CManagedBuffer* looseBuf = g_BufferManager.ClaimBuffer();
@@ -3238,17 +3724,23 @@ IModel::IModel(const std::filesystem::path path, const r1::studiohdr_t* const pH
 	// animations (animations, sequences, nodes, ik, etc..)
 	if (pHdr->numlocalanim || pHdr->numlocalseq)
 	{
-		IMODEL_ALLOC_DATA_LIMIT(IModelAnimation, animations, animationCount, pHdr->numlocalanim, MAXSTUDIOANIMS);
+		IMODEL_ALLOC_DATA_LIMIT(IModelAnimation, animations, animationCount, static_cast<uint16_t>(pHdr->numlocalanim), MAXSTUDIOANIMS);
 		for (int i = 0; i < pHdr->numlocalanim; i++)
 		{
 			animations[i] = IModelAnimation(pHdr, pHdr->pAnimdesc(i), &looseData);
 		}
 
-		IMODEL_ALLOC_DATA_LIMIT(IModelSequence, sequences, sequenceCount, pHdr->numlocalseq, MAXSTUDIOSEQUENCES);
+		// pretty sure we don't have external animations
+		localAnimationCount = animationCount;
+
+		IMODEL_ALLOC_DATA_LIMIT(IModelSequence, sequences, sequenceCount, static_cast<uint16_t>(pHdr->numlocalseq), MAXSTUDIOSEQUENCES);
 		for (int i = 0; i < pHdr->numlocalseq; i++)
 		{
 			sequences[i] = IModelSequence(pHdr, pHdr->pSeqdesc(i));
 		}
+
+		// same with sequences
+		localSequenceCount = sequenceCount;
 	}
 
 	// todo transitions
@@ -3323,11 +3815,11 @@ IModel::IModel(const std::filesystem::path path, const r2::studiohdr_t* const pH
 	textures(nullptr), textureCount(0u), cdTextures(nullptr), cdTexturesCount(0u), skins(nullptr), skinCount(0u),
 
 	// animation
-	animations(nullptr), animationCount(0u), sequences(nullptr), sequenceCount(0u), localNodeNames(nullptr), localNodeCount(0u), ikChains(nullptr), ikChainCount(0u),
+	animations(nullptr), animationCount(0u), localAnimationCount(0u), sequences(nullptr), sequenceCount(0u), localSequenceCount(0u), localNodeNames(nullptr), localNodeCount(0u), ikChains(nullptr), ikChainCount(0u),
 	localPoseParameters(nullptr), localPoseParameterCount(0u), localIkAutoPlayLocks(nullptr), localIkAutoPlayLockCount(0u), includeModels(nullptr), includeModelCount(0u), animBlockName(nullptr), animBlocks(nullptr), animBlockCount(0u),
 
 	// collision
-	physics(nullptr), mapCollision(nullptr)
+	physics(nullptr), mapCollision(nullptr), perTriAABB(nullptr)
 {
 	// get loose files
 	const StudioLooseData_t looseData(reinterpret_cast<const char* const>(pHdr));
@@ -3466,17 +3958,23 @@ IModel::IModel(const std::filesystem::path path, const r2::studiohdr_t* const pH
 	// animations (animations, sequences, nodes, ik, etc..)
 	if (pHdr->numlocalanim || pHdr->numlocalseq)
 	{
-		IMODEL_ALLOC_DATA_LIMIT(IModelAnimation, animations, animationCount, pHdr->numlocalanim, MAXSTUDIOANIMS);
+		IMODEL_ALLOC_DATA_LIMIT(IModelAnimation, animations, animationCount, static_cast<uint16_t>(pHdr->numlocalanim), MAXSTUDIOANIMS);
 		for (int i = 0; i < pHdr->numlocalanim; i++)
 		{
 			animations[i] = IModelAnimation(pHdr, pHdr->pAnimdesc(i));
 		}
 
-		IMODEL_ALLOC_DATA_LIMIT(IModelSequence, sequences, sequenceCount, pHdr->numlocalseq, MAXSTUDIOSEQUENCES);
+		// pretty sure we don't have external animations
+		localAnimationCount = animationCount;
+
+		IMODEL_ALLOC_DATA_LIMIT(IModelSequence, sequences, sequenceCount, static_cast<uint16_t>(pHdr->numlocalseq), MAXSTUDIOSEQUENCES);
 		for (int i = 0; i < pHdr->numlocalseq; i++)
 		{
 			sequences[i] = IModelSequence(pHdr, pHdr->pSeqdesc(i));
 		}
+
+		// same with sequences
+		localSequenceCount = sequenceCount;
 	}
 
 	// todo transitions
@@ -3553,11 +4051,11 @@ IModel::IModel(const std::filesystem::path path, const r5::studiohdr_t* const pH
 	textures(nullptr), textureCount(0u), cdTextures(nullptr), cdTexturesCount(0u), skins(nullptr), skinCount(0u),
 
 	// animation
-	animations(nullptr), animationCount(0u), sequences(nullptr), sequenceCount(0u), localNodeNames(nullptr), localNodeCount(0u), ikChains(nullptr), ikChainCount(0u),
+	animations(nullptr), animationCount(0u), localAnimationCount(0u), sequences(nullptr), sequenceCount(0u), localSequenceCount(0u), localNodeNames(nullptr), localNodeCount(0u), ikChains(nullptr), ikChainCount(0u),
 	localPoseParameters(nullptr), localPoseParameterCount(0u), localIkAutoPlayLocks(nullptr), localIkAutoPlayLockCount(0u), includeModels(nullptr), includeModelCount(0u), animBlockName(nullptr), animBlocks(nullptr), animBlockCount(0u),
 
 	// collision
-	physics(nullptr), mapCollision(nullptr)
+	physics(nullptr), mapCollision(nullptr), perTriAABB(nullptr)
 {
 	// get loose files
 	CManagedBuffer* looseBuf = g_BufferManager.ClaimBuffer();
@@ -3582,7 +4080,6 @@ IModel::IModel(const std::filesystem::path path, const r5::studiohdr_t* const pH
 
 	source.pStudioSource = new studiosource_t(pHdr, version);
 
-	// TODO r5 flags
 	assertm(source.pStudioSource->version_minor == 8, "not supported");
 	SetFlags_R5(pHdr->flags); // set our flags
 
@@ -3689,71 +4186,123 @@ IModel::IModel(const std::filesystem::path path, const r5::studiohdr_t* const pH
 	}
 
 	// animations (animations, sequences, nodes, ik, etc..)
-	//if (pHdr->numlocalanim || pHdr->numlocalseq)
-	//{
-	//	IMODEL_ALLOC_DATA_LIMIT(IModelAnimation, animations, animationCount, pHdr->numlocalanim, MAXSTUDIOANIMS);
-	//	for (int i = 0; i < pHdr->numlocalanim; i++)
-	//	{
-	//		animations[i] = IModelAnimation(pHdr, pHdr->pAnimdesc(i));
-	//	}
+	if (pHdr->numlocalanim || pHdr->numlocalseq)
+	{
+		int potentialSequenceCount = pHdr->numlocalseq; // todo external
+		int potentialAnimationCount = pHdr->numlocalanim;
 
-	//	IMODEL_ALLOC_DATA_LIMIT(IModelSequence, sequences, sequenceCount, pHdr->numlocalseq, MAXSTUDIOSEQUENCES);
-	//	for (int i = 0; i < pHdr->numlocalseq; i++)
-	//	{
-	//		sequences[i] = IModelSequence(pHdr, pHdr->pSeqdesc(i));
-	//	}
-	//}
+		for (int i = 0; i < pHdr->numlocalseq; i++)
+		{
+			const r5::mstudioseqdesc_t* const pSeqDesc = pHdr->pSeqdesc(i);
 
-	//// todo transitions
-	//IMODEL_ALLOC_DATA(char*, localNodeNames, localNodeCount, pHdr->numlocalnodes);
-	//for (int i = 0; i < pHdr->numlocalnodes; i++)
-	//{
-	//	localNodeNames[i] = AllocStudioString(pHdr->pszLocalNodeName(i));
-	//}
+			potentialAnimationCount += pSeqDesc->groupsize[0] * pSeqDesc->groupsize[1]; 
+		}
 
-	//IMODEL_ALLOC_DATA(IModelIKChain, ikChains, ikChainCount, pHdr->numikchains);
-	//for (int i = 0; i < pHdr->numikchains; i++)
-	//{
-	//	ikChains[i] = IModelIKChain(pHdr->pIKChain(i));
-	//}
+		// alloc for all possible animations, real number will be less from deduplication
+		IMODEL_ALLOC_DATA_LIMIT(IModelAnimation, animations, potentialAnimationCount, potentialAnimationCount, MAXSTUDIOANIMS);
+		std::unordered_map<uint64_t, uint32_t> animationIds(potentialAnimationCount);
 
-	//IMODEL_ALLOC_DATA(IModelPoseParameter, localPoseParameters, localPoseParameterCount, pHdr->numlocalposeparameters);
-	//for (int i = 0; i < pHdr->numlocalposeparameters; i++)
-	//{
-	//	localPoseParameters[i] = IModelPoseParameter(pHdr->pLocalPoseParameter(i));
-	//}
+		// parse local animations if they exist (shouldn't)
+		if (pHdr->numlocalanim)
+		{
+			assertm(false, "we should never hit here, r5 models do not have local animations and if they do would break sequences");
 
-	//IMODEL_ALLOC_DATA(IModelIKLock, localIkAutoPlayLocks, localIkAutoPlayLockCount, pHdr->numlocalikautoplaylocks);
-	//for (int i = 0; i < pHdr->numlocalikautoplaylocks; i++)
-	//{
-	//	localIkAutoPlayLocks[i] = IModelIKLock(pHdr->pLocalIKAutoplayLock(i));
-	//}
+			localAnimationCount = static_cast<uint16_t>(pHdr->numlocalanim);
+			animationCount += localAnimationCount;
 
-	//IMODEL_ALLOC_DATA(IModelModelGroup, includeModels, includeModelCount, pHdr->numincludemodels);
-	//for (int i = 0; i < pHdr->numincludemodels; i++)
-	//{
-	//	includeModels[i] = IModelModelGroup(pHdr->pModelGroup(i));
-	//}
+			for (int i = 0; i < pHdr->numlocalanim; i++)
+			{
+				animations[i] = IModelAnimation(this, pHdr->pAnimdesc(i));
+				animationIds.emplace(GetUniqueAnimationID(pHdr->pAnimdesc(i)), i);
+			}
+		}
+
+		// alloc for all sequences including rseq
+		IMODEL_ALLOC_DATA_LIMIT(IModelSequence, sequences, potentialSequenceCount, potentialSequenceCount, MAXSTUDIOSEQUENCES);
+		
+		if (pHdr->numlocalseq)
+		{
+			localSequenceCount = static_cast<uint16_t>(pHdr->numlocalseq);
+			sequenceCount += localSequenceCount;
+
+			for (int i = 0; i < pHdr->numlocalseq; i++)
+			{
+				const r5::mstudioseqdesc_t* const pSeqDesc = pHdr->pSeqdesc(i);
+
+				const int blendCount = pSeqDesc->groupsize[0] * pSeqDesc->groupsize[1];
+				for (int blend = 0; blend < blendCount; blend++)
+				{
+					const r5::mstudioanimdesc_t* const pAnimdesc = pSeqDesc->pAnimDesc<r5::mstudioanimdesc_t>(blend);
+
+					const uint64_t guid = GetUniqueAnimationID(pAnimdesc);
+
+					if (animationIds.contains(guid))
+					{
+						continue;
+					}
+
+					animationIds.emplace(guid, animationCount);
+
+					animations[animationCount] = IModelAnimation(this, pAnimdesc);
+					animationCount++;
+				}
+
+				sequences[i] = IModelSequence(this, pSeqDesc, &animationIds);
+			}
+		}
+	}
+
+	// todo transitions
+	IMODEL_ALLOC_DATA(char*, localNodeNames, localNodeCount, pHdr->numlocalnodes);
+	for (int i = 0; i < pHdr->numlocalnodes; i++)
+	{
+		localNodeNames[i] = AllocStudioString(pHdr->pszLocalNodeName(i));
+	}
+
+	IMODEL_ALLOC_DATA(IModelIKChain, ikChains, ikChainCount, pHdr->numikchains);
+	for (int i = 0; i < pHdr->numikchains; i++)
+	{
+		ikChains[i] = IModelIKChain(pHdr->pIKChain(i));
+	}
+
+	IMODEL_ALLOC_DATA(IModelPoseParameter, localPoseParameters, localPoseParameterCount, pHdr->numlocalposeparameters);
+	for (int i = 0; i < pHdr->numlocalposeparameters; i++)
+	{
+		localPoseParameters[i] = IModelPoseParameter(pHdr->pLocalPoseParameter(i));
+	}
+
+	IMODEL_ALLOC_DATA(IModelIKLock, localIkAutoPlayLocks, localIkAutoPlayLockCount, pHdr->numlocalikautoplaylocks);
+	for (int i = 0; i < pHdr->numlocalikautoplaylocks; i++)
+	{
+		localIkAutoPlayLocks[i] = IModelIKLock(pHdr->pLocalIKAutoplayLock(i));
+	}
+
+	if (pHdr->numincludemodels > 0)
+	{
+		IMODEL_ALLOC_DATA(IModelModelGroup, includeModels, includeModelCount, pHdr->numincludemodels);
+		for (int i = 0; i < pHdr->numincludemodels; i++)
+		{
+			includeModels[i] = IModelModelGroup(pHdr->pModelGroup(i));
+		}
+	}
 
 	// collision
 	// needs check for v10 edges
-	//const irps::phyheader_t* const pPHYS = looseData.GetPHYS_RESPAWN();
-	//if (pPHYS)
-	//{
-	//	physics = new IModelPhysics(this, pPHYS);
-	//}
+	const irps::phyheader_t* const pPHYS = looseData.GetPHYS_RESPAWN();
+	if (pPHYS)
+	{
+		physics = new IModelPhysics(this, pPHYS);
+	}
 
-	//if (pHdr->collisionOffset)
-	//{
-	//	mapCollision = new IModelMapCollision(this, pHdr);
+	if (pHdr->deprecated_collisionOffset)
+	{
+		assertm(false, "should not exist, feature has been replaced");
+	}
 
-	//	// discard as it is unused... no sure how to better check for this
-	//	if (mapCollision->GetShapeCount() == 0)
-	//	{
-	//		FreeAllocVar(mapCollision);
-	//		mapCollision = nullptr;
-	//	}
-	//}
+	if (pHdr->deprecated_m_nPerTriAABBIndex)
+	{
+		assertm(false, "should not exist, feature has been replaced");
+	}
 
 	g_BufferManager.RelieveBuffer(looseBuf);
 }

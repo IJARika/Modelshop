@@ -2,5 +2,5 @@
 
 namespace RTech
 {
-	static uint64_t __fastcall StringToGuid(const char* str);
+	uint64_t StringToGuid(const char* str);
 }

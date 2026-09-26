@@ -916,7 +916,6 @@ namespace r5_190
 	};
 
 
-
 	//
 	// Model Anim
 	//
@@ -1015,6 +1014,10 @@ namespace r5_190
 
 namespace r5_191
 {
+	//
+	// Model Anim
+	//
+
 	struct mstudioanimdesc_t
 	{
 		float fps; // frames per second	
@@ -1184,6 +1187,21 @@ namespace r5_192
 		uint16_t unkStrcOffset; // unk_0xDE
 
 		int unk_E0;
+	};
+}
+
+namespace r5_200
+{
+	//
+	// Model Anim
+	//
+
+	struct mstudio_nointerpframes_t
+	{
+		int firstFrame;
+		int lastFrame;
+
+		uint16_t interpScaleOffset; // per bone
 	};
 }
 
